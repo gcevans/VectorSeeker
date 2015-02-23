@@ -50,7 +50,7 @@ tracerlib.o : tracerlib.c tracerlib.h
 	$(CC) -c -g -O0 -o tracerlib.o tracerlib.c
 	
 runtest : tracer.so mintest
-	time setarch x86_64 -R pin -t ~/Polaris/gcevans/vector/mytool/tracer.so  -- ./mintest
+	time setarch x86_64 -R pin -t tracer.so  -- ./mintest
 
 clean :
 	rm -f *.o *.so mintest tracer.log
