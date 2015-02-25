@@ -1,7 +1,7 @@
 CXX = g++
 CC = gcc
 BUILDTEST = -O3 -vec-report3 -vec-threshold0 -inline-debug-info -g
-PINPATH = /home/gcevans/Polaris/gcevans/vector/pin
+PINPATH = ../pin
 XEDPATH = $(PINPATH)/extras/xed2-intel64
 INCDIR = -I$(PINPATH)/source/include/pin -I$(PINPATH)/source/include/pin/gen -I$(PINPATH)/extras/components/include -I$(PINPATH)/extras/xed2-intel64/include -I$(PINPATH)/source/tools/InstLib -I$(BOOST_ROOT)
 LINKDIR1 = -L$(PINPATH)/extras/xed2-intel64/lib -L$(PINPATH)/pin/intel64/lib -L$(PINPATH)intel64/lib-ext
@@ -50,7 +50,7 @@ tracerlib.o : tracerlib.c tracerlib.h
 	$(CC) -c -g -O0 -o tracerlib.o tracerlib.c
 	
 runtest : tracer.so mintest
-	time setarch x86_64 -R pin -t tracer.so  -- ./mintest
+	setarch x86_64 -R $(PINPATH)/pin -t tracer.so  -- ./mintest
 
 clean :
 	rm -f *.o *.so mintest tracer.log
