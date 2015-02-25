@@ -50,8 +50,8 @@ tracerlib.o : tracerlib.c tracerlib.h
 	$(CC) -c -g -O0 -o tracerlib.o tracerlib.c
 	
 runtest : tracer.so mintest
-	setarch x86_64 -R $(PINPATH)/pin -t tracer.so  -- ./mintest
+	setarch x86_64 -R $(PINPATH)/pin -t tracer.so -o mintest.log -- ./mintest
 
 clean :
-	rm -f *.o *.so mintest tracer.log
+	rm -f *.o *.so mintest mintest.log
 	

@@ -136,7 +136,7 @@ KNOB<int> KnobTraceLimit(KNOB_MODE_WRITEONCE, "pintool",
 	"trace-limit", "0", "Maximum number of trace regions 0 is unlimited");
 	
 KNOB<bool> KnobSkipMove(KNOB_MODE_WRITEONCE, "pintool",
-	"m", "0", "Skip vectorizing move instructions");
+	"m", "1", "Vectorize move instructions");
 
 KNOB<bool> KnobDebugTrace(KNOB_MODE_WRITEONCE, "pintool",
 	"D", "0", "Enable full debug trace");
