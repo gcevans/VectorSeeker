@@ -38,7 +38,7 @@ mintest : mintest.o dummy.o tracerlib.o
 	$(CXX) -g -o mintest mintest.o dummy.o tracerlib.o
 	
 mintest.o : mintest.cpp dummy.h tracerlib.h
-	$(CXX) -O0 -c -g -gdwarf-2 -o mintest.o mintest.cpp
+	$(CXX) -O1 -c -g -gdwarf-2 -o mintest.o mintest.cpp
 	
 deeploops : deeploops.o dummy.o tracerlib.o
 	$(CXX) -g -o deeploops deeploops.o dummy.o tracerlib.o
