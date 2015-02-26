@@ -857,20 +857,23 @@ int s1113()
 	return 0;
 }
 
-int s115()
+int s122(int n1, int n3)
 {
 
-//	linear dependence testing
-//	triangular saxpy loop
+//	induction variable recognition
+//	variable lower and upper bound, and stride
+//	reverse data access and jump in data access
 
-	for (int j = 0; j < LEN2; j++) {
-		for (int i = j+1; i < LEN2; i++) {
-			a[i] -= aa[j][i] * a[j];
-		}
+	int j, k;
+	j = 1;
+	k = 0;
+	for (int i = n1-1; i < LEN; i += n3) {
+		k += j;
+		a[i] += b[LEN - k];
 	}
+	
 	return 0;
 }
-
 
 int main()
 {
@@ -898,9 +901,9 @@ int main()
 	init( "s113 ");
 	printf("s1113\n");
 	s1113();
-	init( "s115 ");
-	printf("s115\n");
-	s115();
+	init( "s122 ");
+	printf("s122\n");
+	s122(n1,n3);
 
 	return 0;
 }
