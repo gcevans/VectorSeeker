@@ -56,10 +56,10 @@ tracerlib.o : tracerlib.c tracerlib.h
 	$(CC) -c -g -O0 -o tracerlib.o tracerlib.c
 	
 runtest : tracer.so mintest
-	setarch x86_64 -R $(PINPATH)/pin.sh -injection child -t tracer.so -o mintest.log -- ./mintest
+	$(PINPATH)/pin.sh -injection child -t tracer.so -o mintest.log -- ./mintest
 
 rundeeploops : tracer.so deeploops
-	setarch x86_64 -R $(PINPATH)/pin.sh -injection child -t tracer.so -o deeploops.log -- ./deeploops
+	$(PINPATH)/pin.sh -injection child -t tracer.so -o deeploops.log -- ./deeploops
 
 clean :
 	rm -f *.o *.so mintest mintest.log deeploops deeploops.log
