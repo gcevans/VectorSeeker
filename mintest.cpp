@@ -7,6 +7,7 @@
 double *A;
 double *B;
 double *C;
+double *D;
 size_t *I;
 
 void init()
@@ -48,6 +49,16 @@ void dependant()
 	}	
 }
 
+double reduction()
+{
+    double c = 0;
+    for(int i = 0; i < COUNT; i++)
+    {
+        c += (A[i] * B[i]);
+    }
+    return c;
+}
+
 int main()
 {
 	A = (double *) malloc(sizeof(double) * COUNT);
@@ -63,7 +74,10 @@ int main()
 	
 	init();
 	dependant();
-	
+
+    init();
+    C[0] = reduction();
+    
 	free(A);
 	free(B);
 	free(C);
