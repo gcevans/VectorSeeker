@@ -123,7 +123,7 @@ WITH THE SOFTWARE.
 
 
 #define LEN 32000
-#define LEN2 10
+#define LEN2 256
 
 #define ntimes 100000
 
