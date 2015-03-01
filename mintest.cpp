@@ -35,15 +35,25 @@ void indirect()
 
 void basic()
 {
-	for(int i = 0; i < COUNT; i++)
+	for(int i = 0; i < COUNT*4; i++)
 	{
 		A[i] = B[i] + 1;
 	}
 }
 
-void dependant()
+void basic2() 
 {
-	for(int i = 1; i < COUNT; i++)
+        for(int i = 0; i < COUNT; i++)
+        {
+                A[i] = C[i] + 1;
+        }
+}
+
+void dependant()
+
+
+{
+	for(int i = 1; i < COUNT*3; i++)
 	{
 		C[i] = C[i-1] + 1;
 	}	
@@ -61,10 +71,10 @@ double reduction()
 
 int main()
 {
-	A = (double *) malloc(sizeof(double) * COUNT);
-	B = (double *) malloc(sizeof(double) * COUNT);
-	C = (double *) malloc(sizeof(double) * COUNT);
-	I = (size_t *) malloc(sizeof(size_t)*COUNT);
+	A = (double *) malloc(sizeof(double) * COUNT * 10);
+	B = (double *) malloc(sizeof(double) * COUNT * 10);
+	C = (double *) malloc(sizeof(double) * COUNT * 10);
+	I = (size_t *) malloc(sizeof(size_t)*COUNT * 10);
 
 	init();
 	basic();
@@ -74,6 +84,7 @@ int main()
 	
 	init();
 	dependant();
+	basic2();
 
     init();
     C[0] = reduction();
