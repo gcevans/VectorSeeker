@@ -141,8 +141,8 @@ KNOB<bool> KnobSkipMove(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<bool> KnobDebugTrace(KNOB_MODE_WRITEONCE, "pintool",
 	"D", "0", "Enable full debug trace");
 
-KNOB<bool> KnobSupressMallocPrinting(KNOB_MODE_WRITEONCE, "pintool",
-	"no-malloc-log", "0", "Don't log malloc calls");
+KNOB<bool> KnobMallocPrinting(KNOB_MODE_WRITEONCE, "pintool",
+	"log-malloc", "0", "log malloc calls");
 
 KNOB<bool> KnobSupressMalloc(KNOB_MODE_WRITEONCE, "pintool",
 	"no-malloc", "0", "Don't track malloc calls");
@@ -870,7 +870,7 @@ VOID traceFunctionExit(CHAR * name, ADDRINT start, THREADID threadid)
 // memory allocations other then from malloc
 VOID arrayMem(ADDRINT start, size_t size)
 {
-	if(!KnobSupressMallocPrinting)
+	if(KnobMallocPrinting)
 		fprintf(trace,"Memory Allocation Found start = %p size = %p\n", (void *) start, (void *) size);
 	
 	if(size > 0)
@@ -882,7 +882,7 @@ VOID arrayMem(ADDRINT start, size_t size)
 
 VOID arrayMemClear(ADDRINT start)
 {
-	if(!KnobSupressMallocPrinting)
+	if(KnobMallocPrinting)
 		fprintf(trace,"Memory Allocation Found cleared = %p\n", (void *) start);
 
 	for(size_t i = 0; i < allocationMap[start]; i++)
@@ -918,7 +918,7 @@ VOID MallocAfter(ADDRINT ret, THREADID threadid)
 		for(size_t i = 0; i < allocationMap[ret]; i++)
 			shadowMemory.writeMem(ret+i, 1);
 
-	if(!KnobSupressMallocPrinting)
+	if(KnobMallocPrinting)
 	    fprintf(trace,"malloc returns %p of size(%p)\n",(void *)ret,(void *)tdata->malloc_size);
 }
 

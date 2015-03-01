@@ -828,51 +828,95 @@ void set(int* ip, float* s1, float* s2){
 
 int s112()
 {
-	for (int i = LEN - 2; i >= 0; i--) {
-		a[i+1] = a[i] + b[i];
-	}
+//	linear dependence testing
+//	loop reversal
+
+// icc solution
+// 	__m128 rA, rB, rS;
+// 	rA = _mm_load_ps(a);
+// 	a[LEN-2+1] = a[LEN-2] + b[LEN-2];
+// 	a[LEN-3+1] = a[LEN-3] + b[LEN-3];
+// 	a[LEN-4+1] = a[LEN-4] + b[LEN-4];
+// 	for (int i = 0; i < LEN-4; i+=4) {
+// 			rB = _mm_load_ps(&b[i]);
+// 			rS = _mm_add_ps(rA,rB);
+// 			rA = _mm_load_ps(&a[i+4]);
+// 			_mm_storeu_ps(&a[i+1],rS);
+// 	}
 	return 0;
 }
 
 int s1113()
 {
-	for (int i = 0; i < LEN; i++) {
-		a[i] = a[LEN/2] + b[i];
+//	linear dependence testing
+//	one iteration dependency on a(LEN/2) but still vectorizable
+
+	float temp = a[LEN/2];
+	for (int i = 0; i < LEN/2; i++) {
+		a[i] = temp + b[i];
+	}
+	a[LEN/2] = a[LEN/2] + b[LEN/2];
+	temp = a[LEN/2];
+	for (int i = LEN/2+1; i < LEN; i++) {
+		a[i] = temp + b[i];
 	}
 	return 0;
 }
 
 int s171(int inc)
 {
-	for (int i = 0; i < LEN; i++) {
-		a[i * inc] += b[i];
-	}
+
+//	symbolics
+//	symbolic dependence tests
+
+	if (inc == 1)
+		for (int i = 0; i < LEN; i++) {
+			a[i] += b[i];
+		}
+	else
+		for (int i = 0; i < LEN; i++) {
+			a[i * inc] += b[i];
+		}
 
 	return 0;
 }
 
 int s211()
 {
+
+//	statement reordering
+//	statement reordering allows vectorization
+
 	for (int i = 1; i < LEN-1; i++) {
-		a[i] = b[i - 1] + c[i] * d[i];
 		b[i] = b[i + 1] - e[i] * d[i];
+		a[i] = b[i - 1] + c[i] * d[i];
 	}
 	return 0;
 }
 
 int s1213()
 {
-	for (int i = 1; i < LEN-1; i++) {
-		a[i] = b[i-1]+c[i];
-		b[i] = a[i+1]*d[i];
+
+//	statement reordering
+//	dependency needing temporary
+
+	a[1] = b[0]+c[1];
+	for (int i = 1; i < LEN-2; i++) {
+		b[i  ] = a[i+1]*d[i  ];
+		a[i+1] = b[i  ]+c[i+1];
 	}
+	b[LEN-2] = a[LEN-1]*d[LEN-2];
 	return 0;
 }
 
 int s1232()
 {
-	for (int j = 0; j < LEN2; j++) {
-		for (int i = j; i < LEN2; i++) {
+
+//	loop interchange
+//	interchanging of triangular loops
+
+	for (int i = 0; i < LEN2; i++) {
+		for (int j = 0; j <= i; j++) {
 			aa[i][j] = bb[i][j] + cc[i][j];
 		}
 	}
@@ -882,7 +926,21 @@ int s1232()
 
 int s243()
 {
-	for (int i = 0; i < LEN-1; i++) {
+
+//	node splitting
+//	false dependence cycle breaking
+
+	int sm=32;
+	float temp_a[sm];
+
+	for (int ii = 0; ii < LEN-sm; ii+=sm){
+		for (int i=ii,j=0; i < ii+sm; i++,j++) {
+			temp_a[j] = b[i]+c[i]*d[i];
+			b[i] = temp_a[j]+d[i]*e[i];
+			a[i] = b[i] + a[i+1] * d[i];
+		}
+	}
+	for (int i = LEN-sm; i < LEN-1; i++) {
 		a[i] = b[i] + c[i  ] * d[i];
 		b[i] = a[i] + d[i  ] * e[i];
 		a[i] = b[i] + a[i+1] * d[i];
@@ -893,10 +951,20 @@ int s243()
 
 int s2251()
 {
+
+//	scalar and array expansion
+//	scalar expansion
+
 	float s = (float)0.0;
-	for (int i = 0; i < LEN; i++) {
+	for (int i = 0; i < 4; i++) {
 		a[i] = s*e[i];
 		s = b[i]+c[i];
+	}
+	for (int i = 0; i < LEN-4; i++) {
+		a[i+4] = (b[i+3]+c[i+3])*e[i+4];
+		b[i] = a[i]+d[i];
+	}
+	for (int i = LEN-4; i < LEN; i++) {
 		b[i] = a[i]+d[i];
 	}
 
@@ -909,6 +977,14 @@ int main()
 	markmemory();
 	int n1 = 1;
 	int n3 = 1;
+	int* ip = (int *) malloc(LEN*sizeof(float));
+	float s1,s2;
+	int len = LEN;
+	static short A[LEN];
+	_tracer_array_memory(&A[0],sizeof(float)*LEN);
+	static char B[LEN];
+	_tracer_array_memory(&B[0],sizeof(float)*LEN);
+	set(ip, &s1, &s2);
 	
 	printf("Loop\n");
 	init( "s113 ");
@@ -935,7 +1011,7 @@ int main()
 	init( "s112 ");
 	printf("S112\n");
 	s112();
-
+	
 	return 0;
 }
 

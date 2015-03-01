@@ -46,6 +46,12 @@ deeploops : deeploops.o dummy.o tracerlib.o
 deeploops.o : deeploops.c dummy.h tracerlib.h
 	$(CC) -O1 -std=c99 -c -g -gdwarf-2 -o deeploops.o deeploops.c
 	
+deeploops-sol : deeploops-sol.o dummy.o tracerlib.o
+	$(CXX) -g -o deeploops-sol deeploops-sol.o dummy.o tracerlib.o
+	
+deeploops-sol.o : deeploops-sol.c dummy.h tracerlib.h
+	$(CC) -O1 -std=c99 -c -g -gdwarf-2 -o deeploops-sol.o deeploops-sol.c
+	
 buildtest.o : mintest.cpp dummy.h tracerlib.h
 	$(CXX) $(BUILDTEST) -c -o mintest.o mintest.cpp
 	
@@ -62,5 +68,5 @@ rundeeploops : tracer.so deeploops
 	$(PINPATH)/pin.sh -injection child -t tracer.so -o deeploops.log -- ./deeploops
 
 clean :
-	rm -f *.o *.so mintest mintest.log deeploops deeploops.log
+	rm -f *.o *.so mintest mintest.log deeploops deeploops.log deeploops-sol deeploops-sol.log
 	
