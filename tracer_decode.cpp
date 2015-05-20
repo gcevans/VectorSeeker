@@ -85,7 +85,8 @@ instructionType decodeInstructionData(ADDRINT ip)
 	instructionLocations[(ADDRINT)ip].ip = (ADDRINT)ip;
 	xed_state_t dstate;
 	xed_state_zero(&dstate);
-	xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
+	// xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
+	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
 	xed_decoded_inst_zero_set_mode(&(ins), &dstate);
 	xed_decode(&(ins),STATIC_CAST(const xed_uint8_t*,ip),15);
 	xedins = xed_decoded_inst_inst(&(ins));
@@ -107,10 +108,10 @@ instructionType decodeInstructionData(ADDRINT ip)
 			const xed_operand_t *curOp = xed_inst_operand(xedins, i);
 			if(xed_operand_read(curOp) )
 			{
-				if(xed_operand_reg(curOp))
+				xed_operand_enum_t op_name = xed_operand_name(xed_inst_operand(xed_decoded_inst_inst(&(ins)),i));
+				xed_reg_enum_t r = xed_decoded_inst_get_reg(&(ins), op_name);
+				if(r)
 				{
-					xed_operand_enum_t op_name = xed_operand_name(xed_inst_operand(xed_decoded_inst_inst(&(ins)),i));
-					xed_reg_enum_t r = xed_decoded_inst_get_reg(&(ins), op_name);
 					if(!isIgnoredRegister(r))
 					{
 						if(xed_reg_class(r) == XED_REG_CLASS_GPR)
@@ -203,10 +204,10 @@ instructionType decodeInstructionData(ADDRINT ip)
 		const xed_operand_t *curOp = xed_inst_operand(xedins, i);
 		if(xed_operand_written(curOp) )
 		{
-			if(xed_operand_reg(curOp))
+			xed_operand_enum_t op_name = xed_operand_name(xed_inst_operand(xed_decoded_inst_inst(&(ins)),i));
+			xed_reg_enum_t r = xed_decoded_inst_get_reg(&(ins), op_name);
+			if(r)
 			{
-				xed_operand_enum_t op_name = xed_operand_name(xed_inst_operand(xed_decoded_inst_inst(&(ins)),i));
-				xed_reg_enum_t r = xed_decoded_inst_get_reg(&(ins), op_name);
 				if(!isIgnoredRegister(r))
 				{
 					if(xed_reg_class(r) == XED_REG_CLASS_GPR)
@@ -238,7 +239,8 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 	char decodeBuffer[1024];
 	xed_state_t dstate;
 	xed_state_zero(&dstate);
-	xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
+	// xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
+	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
 	xed_decoded_inst_t ins;
 	xed_decoded_inst_zero_set_mode(&ins, &dstate);
 	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
@@ -256,16 +258,17 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 	PIN_UnlockClient();
 
 
-	fprintf(trace, "%p:%d:%s - %s:%s\t\t", ip,source_line, called_from, source_file.c_str(), decodeBuffer);
+	fprintf(trace, "%p:%d:%s - %s:%s\t\tOperands(%d)", ip,source_line, called_from, source_file.c_str(), decodeBuffer,numOperands);
 
 	for(int i = 0; i < numOperands; i++)
 	{
 		const xed_operand_t *curOp = xed_inst_operand(xedins, i);
+		fprintf(trace, "%d:", (i+1));
 		if(xed_operand_read(curOp) )
 		{
+			xed_operand_enum_t op_name = xed_operand_name(xed_inst_operand(xed_decoded_inst_inst(&ins),i));
 			if(xed_decoded_inst_get_reg(&ins, xed_operand_name(curOp)))
 			{
-				xed_operand_enum_t op_name = xed_operand_name(xed_inst_operand(xed_decoded_inst_inst(&ins),i));
 				xed_reg_enum_t r = xed_decoded_inst_get_reg(&ins, op_name);
 				fprintf(trace,"r:%s=%ld ",xed_reg_enum_t2str(r),shadowMemory.readReg(r));
 				if(r != XED_REG_CR0)
@@ -273,18 +276,22 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 			}
 			else
 			{
-				fprintf(trace,"not a regitster ");
+				fprintf(trace,"r:not a regitster (%s)",xed_operand_enum_t2str(op_name));
 			}
 		}
 		if(xed_operand_written(curOp) )
 		{
-			if(xed_operand_reg(curOp))
+			xed_operand_enum_t op_name = xed_operand_name(xed_inst_operand(xed_decoded_inst_inst(&ins),i));
+			if(xed_decoded_inst_get_reg(&ins, xed_operand_name(curOp)))
 			{
-				xed_operand_enum_t op_name = xed_operand_name(xed_inst_operand(xed_decoded_inst_inst(&ins),i));
 				xed_reg_enum_t r = xed_decoded_inst_get_reg(&ins, op_name);
 				fprintf(trace,"w:%s=%ld ",xed_reg_enum_t2str(r),shadowMemory.readReg(r));
 				if(r != XED_REG_CR0)
 					value = max(shadowMemory.readReg(r),value);
+			}
+			else
+			{
+				fprintf(trace, "w:not a register (%s)",xed_operand_enum_t2str(op_name));
 			}
 		}
 		if(!xed_operand_written(curOp) && !xed_operand_read(curOp))

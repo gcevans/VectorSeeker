@@ -219,7 +219,8 @@ VOID writeLog()
 					VOID *ip = (VOID *)(*current_line)[j]->ip;
 					xed_state_t dstate;
 					xed_state_zero(&dstate);
-					xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
+					// xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
+					xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
 					xed_decoded_inst_t ins;
 					xed_decoded_inst_zero_set_mode(&ins, &dstate);
 					xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
@@ -433,7 +434,8 @@ VOID handleX87Inst(VOID *ip)
 	char decodeBuffer[1024];
 	xed_state_t dstate;
 	xed_state_zero(&dstate);
-	xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
+	// xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
+	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
 	xed_decoded_inst_t ins;
 	xed_decoded_inst_zero_set_mode(&ins, &dstate);
 	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
@@ -458,7 +460,8 @@ VOID handleMultiLoadStore(VOID *ip)
 	char decodeBuffer[1024];
 	xed_state_t dstate;
 	xed_state_zero(&dstate);
-	xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
+	// xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
+	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
 	xed_decoded_inst_t ins;
 	xed_decoded_inst_zero_set_mode(&ins, &dstate);
 	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
@@ -723,7 +726,8 @@ VOID Routine(RTN rtn, VOID *v)
 /*				char decodeBuffer[1024];
 				xed_state_t dstate;
 				xed_state_zero(&dstate);
-				xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
+				// xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
+				xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
 				xed_decoded_inst_t ins;
 				xed_decoded_inst_zero_set_mode(&ins, &dstate);
 				xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);

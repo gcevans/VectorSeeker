@@ -2,11 +2,14 @@ CXX = g++
 CC = gcc
 BUILDTEST = -O3 -vec-report3 -vec-threshold0 -inline-debug-info -g
 PINPATH = ../pin
-XEDPATH = $(PINPATH)/extras/xed2-intel64
-INCDIR = -I$(PINPATH)/source/include/pin -I$(PINPATH)/source/include/pin/gen -I$(PINPATH)/extras/components/include -I$(PINPATH)/extras/xed2-intel64/include -I$(PINPATH)/source/tools/InstLib -I$(BOOST_ROOT)
-LINKDIR1 = -L$(PINPATH)/extras/xed2-intel64/lib -L$(PINPATH)/pin/intel64/lib -L$(PINPATH)intel64/lib-ext
-LINKDIR2 = -L$(PINPATH)/extras/xed2-intel64/lib -L$(PINPATH)/intel64/lib -L$(PINPATH)/intel64/lib-ext
-LIBS = -lpin -lxed -ldwarf -lelf -ldl
+#XEDNAME = xed2-intel64
+XEDNAME = xed-intel64
+XEDPATH = $(PINPATH)/extras/$(XEDNAME)
+INCDIR = -I$(PINPATH)/source/include/pin -I$(PINPATH)/source/include/pin/gen -I$(PINPATH)/extras/components/include -I$(PINPATH)/extras/$(XEDNAME)/include -I$(PINPATH)/source/tools/InstLib
+LINKDIR1 = -L$(PINPATH)/intel64/runtime/cpplibs -L$(PINPATH)/extras/$(XEDNAME)/lib -L$(PINPATH)/pin/intel64/lib -L$(PINPATH)intel64/lib-ext -L$(PINPATH)/intel64/runtime/glibc
+LINKDIR2 = -L$(PINPATH)/extras/$(XEDNAME)/lib -L$(PINPATH)/intel64/lib -L$(PINPATH)/intel64/lib-ext
+#LIBS = -lpin -lxed -ldwarf -lelf -ldl
+LIBS = -lpin -lxed -lpindwarf -ldl
 COPTS1 = -g -std=gnu++0x -c -Wall -Werror -Wno-unknown-pragmas  -O3 -fomit-frame-pointer -DBIGARRAY_MULTIPLIER=1 -DUSING_XED  -fno-strict-aliasing
 COPTS2 = -fno-stack-protector -DTARGET_IA32E -DHOST_IA32E -fPIC -DTARGET_LINUX -O3 -fomit-frame-pointer
 LOPTS = -g -std=gnu++0x -Wl,--hash-style=sysv -shared -Wl,-Bsymbolic -Wl,--version-script=$(PINPATH)/source/include/pin/pintool.ver
