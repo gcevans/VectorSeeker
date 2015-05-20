@@ -35,6 +35,7 @@ END_LEGAL */
 #include "tracer_decode.h"
 #include "tracer.h"
 #include "resultvector.h"
+#include <algorithm>
 
 
 #define STATIC_CAST(x,y) ((x) (y))
@@ -103,7 +104,6 @@ bool instructionLocationsDataPointerAddrSort(instructionLocationsData *a, instru
 }
 
 // Globals
-xed_decode_cache_t xedDecodeCache;
 map<ADDRINT,size_t> allocationMap;
 ShadowMemory shadowMemory;
 map<ADDRINT,instructionLocationsData > instructionLocations;
@@ -222,8 +222,8 @@ VOID writeLog()
 					xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
 					xed_decoded_inst_t ins;
 					xed_decoded_inst_zero_set_mode(&ins, &dstate);
-					xed_decode_cache(&ins,STATIC_CAST(const xed_uint8_t*,ip),15,&xedDecodeCache);
-					xed_format_intel(&ins,decodeBuffer,1024,STATIC_CAST(xed_uint64_t,ip));
+					xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
+					disassemblyToBuff(decodeBuffer, ip, &ins);
 					int vector_count = -1;
 					int current_vector_size = -1;
 					bool once = false;
@@ -436,8 +436,8 @@ VOID handleX87Inst(VOID *ip)
 	xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
 	xed_decoded_inst_t ins;
 	xed_decoded_inst_zero_set_mode(&ins, &dstate);
-	xed_decode_cache(&ins,STATIC_CAST(const xed_uint8_t*,ip),15,&xedDecodeCache);
-	xed_format_intel(&ins,decodeBuffer,1024,STATIC_CAST(xed_uint64_t,ip));
+	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
+	disassemblyToBuff(decodeBuffer, ip, &ins);
 	fprintf(trace,"x87error:%s,%d:%p:%s:%s\n",instructionLocations[(ADDRINT)ip].file_name.c_str(),instructionLocations[(ADDRINT)ip].line_number,ip,xed_category_enum_t2str(xed_inst_category(xed_decoded_inst_inst(&(ins)))),decodeBuffer);
 
 	long value = 0;
@@ -461,8 +461,8 @@ VOID handleMultiLoadStore(VOID *ip)
 	xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
 	xed_decoded_inst_t ins;
 	xed_decoded_inst_zero_set_mode(&ins, &dstate);
-	xed_decode_cache(&ins,STATIC_CAST(const xed_uint8_t*,ip),15,&xedDecodeCache);
-	xed_format_intel(&ins,decodeBuffer,1024,STATIC_CAST(xed_uint64_t,ip));
+	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
+	disassemblyToBuff(decodeBuffer, ip, &ins);
 	fprintf(trace,"multiloadstore:%s,%d:%p:%s:%s\n",instructionLocations[(ADDRINT)ip].file_name.c_str(),instructionLocations[(ADDRINT)ip].line_number,ip,xed_category_enum_t2str(xed_inst_category(xed_decoded_inst_inst(&(ins)))),decodeBuffer);
 
 	long value = 0;
@@ -726,7 +726,7 @@ VOID Routine(RTN rtn, VOID *v)
 				xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
 				xed_decoded_inst_t ins;
 				xed_decoded_inst_zero_set_mode(&ins, &dstate);
-				xed_decode_cache(&ins,STATIC_CAST(const xed_uint8_t*,ip),15,&xedDecodeCache);
+				xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
 				xed_format_intel(&ins,decodeBuffer,1024,STATIC_CAST(xed_uint64_t,ip));
 				fprintf(trace,"extraoperror:%s:%s\n",xed_category_enum_t2str(xed_inst_category(xed_decoded_inst_inst(&(ins)))),decodeBuffer);
 				fprintf(trace,"File:%s\n",instructionLocations[ip].file_name.c_str());
@@ -1074,11 +1074,6 @@ int main(int argc, char * argv[])
     if (PIN_Init(argc, argv)) return Usage();
 
 	xed_tables_init();
-	xed_uint32_t n_cache_entries = 16*1024;
-	xed_decode_cache_entry_t* cache_entries = 
-		(xed_decode_cache_entry_t*) malloc(n_cache_entries * 
-		sizeof(xed_decode_cache_entry_t));
-	xed_decode_cache_initialize(&xedDecodeCache, cache_entries, n_cache_entries);
 	tracinglevel = 0;
 	instructionCount = 0;
 	vectorInstructionCountSavings = 0;
@@ -1111,6 +1106,5 @@ int main(int argc, char * argv[])
     // Start the program, never returns
     PIN_StartProgram();
     
-    free(cache_entries);
     return 0;
 }

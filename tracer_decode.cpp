@@ -87,7 +87,7 @@ instructionType decodeInstructionData(ADDRINT ip)
 	xed_state_zero(&dstate);
 	xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
 	xed_decoded_inst_zero_set_mode(&(ins), &dstate);
-	xed_decode_cache(&(ins),STATIC_CAST(const xed_uint8_t*,ip),15,&xedDecodeCache);
+	xed_decode(&(ins),STATIC_CAST(const xed_uint8_t*,ip),15);
 	xedins = xed_decoded_inst_inst(&(ins));
 	xed_category_enum_t cat = xed_inst_category(xedins);
 	if(isIgnoredInstruction(cat))
@@ -241,8 +241,8 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 	xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
 	xed_decoded_inst_t ins;
 	xed_decoded_inst_zero_set_mode(&ins, &dstate);
-	xed_decode_cache(&ins,STATIC_CAST(const xed_uint8_t*,ip),15,&xedDecodeCache);
-	xed_format_intel(&ins,decodeBuffer,1024,STATIC_CAST(xed_uint64_t,ip));
+	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
+	disassemblyToBuff(decodeBuffer, ip, &ins);
 	const xed_inst_t *xedins = xed_decoded_inst_inst(&ins);
 
 	int numOperands = xed_decoded_inst_noperands(&ins);
@@ -322,6 +322,32 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 		fprintf(trace, "addr=%p ",addr);
 	
 	fprintf(trace, "value=%ld\n",value);
+}
+
+
+VOID disassemblyToBuff(char * decodeBuffer, VOID *ip, const xed_decoded_inst_t *ins)
+{
+	xed_print_info_t pi;
+	xed_init_print_info(&pi);
+	pi.p = ins;
+	pi.blen = 1024;
+	pi.buf = decodeBuffer;
+	pi.context = 0;
+	pi.disassembly_callback = 0;
+	pi.runtime_address = STATIC_CAST(xed_uint64_t,ip);
+	//pi.syntax = syntax
+	pi.format_options_valid = 0; // use defaults
+    pi.buf[0]=0; //allow use of strcat
+    int ok = xed_format_generic(&pi);
+    if (!ok)
+    {
+        pi.blen = xed_strncpy(pi.buf,"Error disassembling ",pi.blen);
+        pi.blen = xed_strncat(pi.buf,
+                               xed_syntax_enum_t2str(pi.syntax),
+                               pi.blen);
+        pi.blen = xed_strncat(pi.buf," syntax.",pi.blen);
+    }
+	//xed_format_intel(&ins,decodeBuffer,1024,STATIC_CAST(xed_uint64_t,ip));	
 }
 
 // Exessivly verbose instruction tracing

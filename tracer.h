@@ -33,7 +33,6 @@ struct instructionDebugData
 };
 
 // Globals
-extern xed_decode_cache_t xedDecodeCache;
 extern ShadowMemory shadowMemory;
 extern map<ADDRINT,instructionLocationsData > instructionLocations;
 extern FILE * trace;
