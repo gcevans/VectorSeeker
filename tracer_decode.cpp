@@ -8,6 +8,8 @@
 
 #define STATIC_CAST(x,y) ((x) (y))
 
+VOID disassemblyToBuffInternal(char * decodeBuffer, VOID *ip, const xed_decoded_inst_t *ins);
+
 // Do no tracing for these instruction categories
 bool isIgnoredInstruction(xed_category_enum_t cat)
 {
@@ -243,7 +245,7 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 	xed_decoded_inst_t ins;
 	xed_decoded_inst_zero_set_mode(&ins, &dstate);
 	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
-	disassemblyToBuff(decodeBuffer, ip, &ins);
+	disassemblyToBuffInternal(decodeBuffer, ip, &ins);
 	const xed_inst_t *xedins = xed_decoded_inst_inst(&ins);
 
 	int numOperands = xed_decoded_inst_noperands(&ins);
@@ -331,7 +333,7 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 }
 
 
-VOID disassemblyToBuff(char * decodeBuffer, VOID *ip, const xed_decoded_inst_t *ins)
+VOID disassemblyToBuffInternal(char * decodeBuffer, VOID *ip, const xed_decoded_inst_t *ins)
 {
 	xed_print_info_t pi;
 	xed_init_print_info(&pi);
@@ -356,6 +358,17 @@ VOID disassemblyToBuff(char * decodeBuffer, VOID *ip, const xed_decoded_inst_t *
 	//xed_format_intel(&ins,decodeBuffer,1024,STATIC_CAST(xed_uint64_t,ip));	
 }
 
+VOID disassemblyToBuff(char * decodeBuffer, VOID *ip)
+{
+	xed_state_t dstate;
+	xed_state_zero(&dstate);
+	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
+	xed_decoded_inst_t ins;
+	xed_decoded_inst_zero_set_mode(&ins, &dstate);
+	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
+	disassemblyToBuffInternal(decodeBuffer, ip, &ins);
+}
+
 const char *getInstCategoryString(VOID *ip)
 {
 	xed_state_t dstate;
@@ -365,17 +378,6 @@ const char *getInstCategoryString(VOID *ip)
 	xed_decoded_inst_zero_set_mode(&ins, &dstate);
 	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
 	return xed_category_enum_t2str(xed_inst_category(xed_decoded_inst_inst(&(ins))));
-}
-
-VOID disassemblyToBuff(char * decodeBuffer, VOID *ip)
-{
-	xed_state_t dstate;
-	xed_state_zero(&dstate);
-	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
-	xed_decoded_inst_t ins;
-	xed_decoded_inst_zero_set_mode(&ins, &dstate);
-	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
-	disassemblyToBuff(decodeBuffer, ip, &ins);
 }
 
 // Exessivly verbose instruction tracing
