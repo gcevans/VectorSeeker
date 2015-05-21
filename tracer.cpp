@@ -217,20 +217,13 @@ VOID writeLog()
 				{
 					(*current_line)[j]->logged = true;
 					VOID *ip = (VOID *)(*current_line)[j]->ip;
-					xed_state_t dstate;
-					xed_state_zero(&dstate);
-					// xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
-					xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
-					xed_decoded_inst_t ins;
-					xed_decoded_inst_zero_set_mode(&ins, &dstate);
-					xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
-					disassemblyToBuff(decodeBuffer, ip, &ins);
+					disassemblyToBuff(decodeBuffer, ip);
 					int vector_count = -1;
 					int current_vector_size = -1;
 					bool once = false;
 					map<long,long>::iterator timeit;
 	
-					fprintf(trace,"\t%p:%s:%s\n\t%s\n\t\t",ip,xed_category_enum_t2str(xed_inst_category(xed_decoded_inst_inst(&(ins)))),decodeBuffer,instructionLocations[(ADDRINT)ip].rtn_name.c_str());
+					fprintf(trace,"\t%p:%s:%s\n\t%s\n\t\t",ip,getInstCategoryString(ip),decodeBuffer,instructionLocations[(ADDRINT)ip].rtn_name.c_str());
 	
 					if(!KnobForVectorSummary)
 					{
@@ -431,49 +424,17 @@ VOID handleX87Inst(VOID *ip)
 
 	instructionCount++;
 
-	char decodeBuffer[1024];
-	xed_state_t dstate;
-	xed_state_zero(&dstate);
-	// xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
-	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
-	xed_decoded_inst_t ins;
-	xed_decoded_inst_zero_set_mode(&ins, &dstate);
-	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
-	disassemblyToBuff(decodeBuffer, ip, &ins);
-	fprintf(trace,"x87error:%s,%d:%p:%s:%s\n",instructionLocations[(ADDRINT)ip].file_name.c_str(),instructionLocations[(ADDRINT)ip].line_number,ip,xed_category_enum_t2str(xed_inst_category(xed_decoded_inst_inst(&(ins)))),decodeBuffer);
-
-	long value = 0;
-
-	if(!KnobDebugTrace)
-		return;
-
-	instructionTracing(ip,NULL,value,"handleX87Inst");
+	instructionTracing(ip,NULL,0,"x87error");
 }
 
-VOID handleMultiLoadStore(VOID *ip)
+VOID unhandledMemOp(VOID *ip)
 {
 	if(tracinglevel == 0)
 		return;
 
 	instructionCount++;
 
-	char decodeBuffer[1024];
-	xed_state_t dstate;
-	xed_state_zero(&dstate);
-	// xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
-	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
-	xed_decoded_inst_t ins;
-	xed_decoded_inst_zero_set_mode(&ins, &dstate);
-	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
-	disassemblyToBuff(decodeBuffer, ip, &ins);
-	fprintf(trace,"multiloadstore:%s,%d:%p:%s:%s\n",instructionLocations[(ADDRINT)ip].file_name.c_str(),instructionLocations[(ADDRINT)ip].line_number,ip,xed_category_enum_t2str(xed_inst_category(xed_decoded_inst_inst(&(ins)))),decodeBuffer);
-
-	long value = 0;
-
-	if(!KnobDebugTrace)
-		return;
-
-	instructionTracing(ip,NULL,value,"hangleMultiLoadStore");
+	instructionTracing(ip,NULL,0,"unhandledMemOp");
 }
 
 const UINT32 NONE_OPERATOR_TYPE = 0;
@@ -722,7 +683,7 @@ VOID Routine(RTN rtn, VOID *v)
 			}
 			else
 			{
-				INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)handleMultiLoadStore, IARG_INST_PTR, IARG_END);
+				INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)unhandledMemOp, IARG_INST_PTR, IARG_END);
 /*				char decodeBuffer[1024];
 				xed_state_t dstate;
 				xed_state_zero(&dstate);

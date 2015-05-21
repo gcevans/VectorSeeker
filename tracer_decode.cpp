@@ -239,7 +239,6 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 	char decodeBuffer[1024];
 	xed_state_t dstate;
 	xed_state_zero(&dstate);
-	// xed_state_init(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b,XED_ADDRESS_WIDTH_64b);
 	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
 	xed_decoded_inst_t ins;
 	xed_decoded_inst_zero_set_mode(&ins, &dstate);
@@ -355,6 +354,28 @@ VOID disassemblyToBuff(char * decodeBuffer, VOID *ip, const xed_decoded_inst_t *
         pi.blen = xed_strncat(pi.buf," syntax.",pi.blen);
     }
 	//xed_format_intel(&ins,decodeBuffer,1024,STATIC_CAST(xed_uint64_t,ip));	
+}
+
+const char *getInstCategoryString(VOID *ip)
+{
+	xed_state_t dstate;
+	xed_state_zero(&dstate);
+	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
+	xed_decoded_inst_t ins;
+	xed_decoded_inst_zero_set_mode(&ins, &dstate);
+	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
+	return xed_category_enum_t2str(xed_inst_category(xed_decoded_inst_inst(&(ins))));
+}
+
+VOID disassemblyToBuff(char * decodeBuffer, VOID *ip)
+{
+	xed_state_t dstate;
+	xed_state_zero(&dstate);
+	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
+	xed_decoded_inst_t ins;
+	xed_decoded_inst_zero_set_mode(&ins, &dstate);
+	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
+	disassemblyToBuff(decodeBuffer, ip, &ins);
 }
 
 // Exessivly verbose instruction tracing

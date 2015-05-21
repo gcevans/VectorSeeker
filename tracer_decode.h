@@ -5,7 +5,7 @@
 
 enum instructionType { IGNORED_INS_TYPE, NORMAL_INS_TYPE, MOVEONLY_INS_TYPE, X87_INS_TYPE};
 
-//Decode Instructions for tool
+//Decode Instructions for tool saving data to instruction map
 instructionType decodeInstructionData(ADDRINT ip);
 
 //Decode Instructions for debug tracing
@@ -13,5 +13,9 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 
 //Get Human readable string for instruction
 VOID disassemblyToBuff(char * decodeBuffer, VOID *ip, const xed_decoded_inst_t *ins);
+VOID disassemblyToBuff(char * decodeBuffer, VOID *ip);
+
+//Get Instruction Class
+const char *getInstCategoryString(VOID *ip);
 
 #endif
