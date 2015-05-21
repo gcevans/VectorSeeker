@@ -197,7 +197,7 @@ VOID writeLog()
 	
 	for(unsigned int i = 0; i < profile_list.size(); i++)
 	{	
-		if(!(profile_list[i]->logged) && (profile_list[i]->file_name != "") && (profile_list[i]->execution_count > 0))
+		if(!(profile_list[i]->logged) && /*(profile_list[i]->file_name != "") && */(profile_list[i]->execution_count > 0))
 		{
 			std::ostringstream loopstackstring;
 			for(std::list<long long>::reverse_iterator it = profile_list[i]->loopid.rbegin(); it != profile_list[i]->loopid.rend();)
@@ -718,8 +718,11 @@ VOID FreeBefore(CHAR * name, ADDRINT start, THREADID threadid)
 {
 	if(KnobSupressMalloc)
 		return;
-	for(size_t i = 0; i < allocationMap[start]; i++)
-		shadowMemory.writeMem(start+i, 0);
+	if(tracinglevel)
+	{
+		for(size_t i = 0; i < allocationMap[start]; i++)
+			shadowMemory.writeMem(start+i, 0);		
+	}
 		
 	allocationMap.erase(start);
 }
@@ -727,14 +730,14 @@ VOID FreeBefore(CHAR * name, ADDRINT start, THREADID threadid)
 // tracing on
 VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
 {
+	if(traceRegionCount > KnobTraceLimit.Value())
+		return;
 
 	if(tracinglevel == 0 && (KnobTraceLimit.Value() != 0))
 	{
 		traceRegionCount++;
-	}
-	
-	if(traceRegionCount > KnobTraceLimit.Value())
-		return;
+		clearState();
+	}	
 
 	tracinglevel++;
 	if(!KnobForFrontend)
@@ -762,6 +765,7 @@ void clearVectors()
 // Clear state to just initialized vectors
 VOID clearState()
 {
+	fprintf(trace, "Clear Started\n");
 	map<ADDRINT,size_t>::iterator it;
 	clearVectors();
 	clearRegisters();
@@ -773,6 +777,7 @@ VOID clearState()
 		for(size_t i = 0; i < allocationMap[start]; i++)
 			shadowMemory.writeMem(start+i, 1);
 	}
+	fprintf(trace, "State Cleared\n");
 }
 
 // tracing off
@@ -799,7 +804,6 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 		{
 			writeOnOffLog();
 		}
-		clearState();
 		tracinglevel = 0;
 	}
 	else
@@ -840,9 +844,10 @@ VOID arrayMem(ADDRINT start, size_t size)
 	
 	if(size > 0)
 		allocationMap[start] = size;
-		
-	for(size_t i = 0; i < size; i++)
-		shadowMemory.writeMem(start+i, 1);
+	
+	if(tracinglevel)
+		for(size_t i = 0; i < size; i++)
+			shadowMemory.writeMem(start+i, 1);
 }
 
 VOID arrayMemClear(ADDRINT start)
