@@ -27,7 +27,6 @@ class ShadowMemory
 {
 private:
 	long shadowRegisters[XED_REG_LAST]; // Register Memory
-//	map<ADDRINT,long> shadowMemory;
 	map<ADDRINT,CacheLine> cacheShadowMemory;
 public:
 	//Access Memory
