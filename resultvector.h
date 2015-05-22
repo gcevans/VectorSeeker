@@ -18,7 +18,7 @@ class ResultVector
 {
 private:
 	map<long,long> vectors;
-	map<long, StridedMemoryTrace> stridedVectors;
+//	map<long, StridedMemoryTrace> stridedVectors;
 
 public:
 	void addToDepth(long depth);
