@@ -156,6 +156,9 @@ KNOB<bool> KnobForVectorSummary(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<bool> KnobForLoopScoping(KNOB_MODE_WRITEONCE, "pintool",
 	"loop-scope", "0", "scope to loops using on and off functions");
 
+KNOB<bool> KnobForShowNoFileInfo(KNOB_MODE_WRITEONCE, "pintool",
+	"show-all", "0", "show instrucions with no file info");
+
 bool memIsArray(VOID *addr)
 {
 	map<ADDRINT,size_t> ::iterator it;
@@ -179,6 +182,8 @@ bool memIsArray(VOID *addr)
 VOID writeLog()
 {
 	char decodeBuffer[1024];
+	bool linesFound = false;
+	bool filesFound = false;
 	if(!KnobForFrontend)
 		fprintf(trace, "#start instruction log\n");
 	
@@ -197,7 +202,17 @@ VOID writeLog()
 	
 	for(unsigned int i = 0; i < profile_list.size(); i++)
 	{	
-		if(!(profile_list[i]->logged) && /*(profile_list[i]->file_name != "") && */(profile_list[i]->execution_count > 0))
+		linesFound = true;
+		string file_name = profile_list[i]->file_name;
+		if(file_name == "")
+			file_name = "NO FILE INFORMATION";
+		else
+		{
+			filesFound = true;
+			fprintf(trace, "%s\n", file_name.c_str());
+		}
+
+		if(!(profile_list[i]->logged) && (file_name != "NO FILE INFORMATION" || KnobForShowNoFileInfo ) && (profile_list[i]->execution_count > 0))
 		{
 			std::ostringstream loopstackstring;
 			for(std::list<long long>::reverse_iterator it = profile_list[i]->loopid.rbegin(); it != profile_list[i]->loopid.rend();)
@@ -208,7 +223,7 @@ VOID writeLog()
 					loopstackstring << ',';
 			}
 				
-			fprintf(trace,"%s,%d<%s>:%ld\n", profile_list[i]->file_name.c_str(),profile_list[i]->line_number,loopstackstring.str().c_str(),profile_list[i]->execution_count);
+			fprintf(trace,"%s,%d<%s>:%ld\n", file_name.c_str(),profile_list[i]->line_number,loopstackstring.str().c_str(),profile_list[i]->execution_count);
 			current_line = &(line_map[profile_list[i]->file_name][profile_list[i]->line_number]);
 			sort(current_line->begin(),current_line->end(),instructionLocationsDataPointerAddrSort);
 			for(unsigned int j = 0; j < current_line->size(); j++)
@@ -270,7 +285,11 @@ VOID writeLog()
 		}
 	}
 	if(!KnobForFrontend)
+	{	
+		if( linesFound && !KnobForShowNoFileInfo && !filesFound)
+			fprintf(trace, "Insturctions were found but they had no debug info on source file or were only mov instructions\n");
 		fprintf(trace, "#end instruction log\n");
+	}
 }
 
 VOID writeOnOffLog()

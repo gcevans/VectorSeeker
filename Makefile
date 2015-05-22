@@ -14,7 +14,7 @@ COPTS1 = -g -std=gnu++0x -c -Wall -Werror -Wno-unknown-pragmas  -O3 -fomit-frame
 COPTS2 = -fno-stack-protector -DTARGET_IA32E -DHOST_IA32E -fPIC -DTARGET_LINUX -O3 -fomit-frame-pointer
 LOPTS = -g -std=gnu++0x -Wl,--hash-style=sysv -shared -Wl,-Bsymbolic -Wl,--version-script=$(PINPATH)/source/include/pin/pintool.ver
 
-all : tracer.so mintest deeploops
+all : tracer.so mintest deeploops mintest-nodebug
 
 tracer.o : tracer.cpp tracer.h tracerlib.h tracer_decode.h shadow.h resultvector.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o tracer.o tracer.cpp
@@ -39,9 +39,15 @@ memmon.o : memmon.cpp memmon.h
 
 mintest : mintest.o dummy.o tracerlib.o
 	$(CXX) -g -o mintest mintest.o dummy.o tracerlib.o
+
+mintest-nodebug : mintest-nodebug.o dummy.o tracerlib.o
+	$(CXX) -o mintest-nodebug mintest-nodebug.o dummy.o tracerlib.o
+
+mintest-nodebug.o : mintest.cpp dummy.h tracerlib.h
+	$(CXX) -O1 -c -o mintest-nodebug.o mintest.cpp
 	
 mintest.o : mintest.cpp dummy.h tracerlib.h
-	$(CXX) -O1 -c -g -gdwarf-2 -o mintest.o mintest.cpp
+	$(CXX) -O1 -g -c -gdwarf-2 -o mintest.o mintest.cpp
 	
 deeploops : deeploops.o dummy.o tracerlib.o
 	$(CXX) -g -o deeploops deeploops.o dummy.o tracerlib.o
@@ -59,10 +65,10 @@ buildtest.o : mintest.cpp dummy.h tracerlib.h
 	$(CXX) $(BUILDTEST) -c -o mintest.o mintest.cpp
 	
 dummy.o : dummy.cpp dummy.h
-	$(CC) -g -c -o dummy.o dummy.cpp
+	$(CC) -c -o dummy.o dummy.cpp
 
 tracerlib.o : tracerlib.c tracerlib.h
-	$(CC) -c -g -O0 -o tracerlib.o tracerlib.c
+	$(CC) -c -O0 -o tracerlib.o tracerlib.c
 	
 runtest : tracer.so mintest
 	$(PINPATH)/pin.sh -injection child -t tracer.so -o mintest.log -- ./mintest
@@ -71,5 +77,5 @@ rundeeploops : tracer.so deeploops
 	$(PINPATH)/pin.sh -injection child -t tracer.so -o deeploops.log -- ./deeploops
 
 clean :
-	rm -f *.o *.so mintest mintest.log deeploops deeploops.log deeploops-sol deeploops-sol.log
+	rm -f *.o *.so mintest mintest.log deeploops deeploops.log deeploops-sol deeploops-sol.log mintest-nodebug
 	

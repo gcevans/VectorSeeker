@@ -3,3 +3,4 @@
 *.so
 deeploops
 mintest
+mintest-nodebug
