@@ -209,7 +209,6 @@ VOID writeLog()
 		else
 		{
 			filesFound = true;
-			fprintf(trace, "%s\n", file_name.c_str());
 		}
 
 		if(!(profile_list[i]->logged) && (file_name != "NO FILE INFORMATION" || KnobForShowNoFileInfo ) && (profile_list[i]->execution_count > 0))
