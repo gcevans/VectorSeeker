@@ -50,7 +50,7 @@ mintest.o : mintest.cpp dummy.h tracerlib.h
 	$(CXX) -O1 -g -c -gdwarf-2 -o mintest.o mintest.cpp
 	
 deeploops : deeploops.o dummy.o tracerlib.o
-	$(CXX) -g -o deeploops deeploops.o dummy.o tracerlib.o
+	$(CXX) -g -O0 -o deeploops deeploops.o dummy.o tracerlib.o
 	
 deeploops.o : deeploops.c dummy.h tracerlib.h
 	$(CC) -O1 -std=c99 -c -g -gdwarf-2 -o deeploops.o deeploops.c
