@@ -475,21 +475,25 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	if(type1 & READ_OPERATOR_TYPE)
 	{
 		value = shadowMemory.readMem((ADDRINT)addr1);
-//		fprintf(trace,"R1[%p]=%ld\n",addr1,shadowMemory[(ADDRINT)addr1]);
+//		fprintf(trace,"R1[%p]=%ld\n",addr1,shadowMemory.readMem((ADDRINT)addr1));
 	}
 
 	if(type2 & READ_OPERATOR_TYPE)
 	{
 		value = max(shadowMemory.readMem((ADDRINT)addr2), value);
-//		fprintf(trace,"R2[%p]=%ld\n",addr2,shadowMemory[(ADDRINT)addr2]);
+//		fprintf(trace,"R2[%p]=%ld\n",addr2,shadowMemory.readMem((ADDRINT)addr2));
 	}
 
 	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ip]);
+
+//	fprintf(trace, "After all memory reads value = %ld\n", value);
 
 	for(unsigned int i = 0; i < current_instruction->registers_read.size(); i++)
 	{
 		value = max(shadowMemory.readReg(current_instruction->registers_read[i]),value);
 	}
+
+//	fprintf(trace, "After all reads value = %ld\n", value);
 		
 	if(value > 0)
 	{
@@ -537,7 +541,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	if(!KnobDebugTrace)
 		return;
 		
-	instructionTracing(ip,addr2,value,"RecordMemReadWriteEND");
+	instructionTracing(ip,addr2,value,"RecordMemReadWrite");
 }
 
 VOID traceMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t2)
@@ -555,13 +559,13 @@ VOID traceMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t
 	if(type1 & READ_OPERATOR_TYPE)
 	{
 		value = shadowMemory.readMem((ADDRINT)addr1);
-//		fprintf(trace,"R1[%p]=%ld\n",addr1,shadowMemory[(ADDRINT)addr1]);
+//		fprintf(trace,"R1[%p]=%ld\n",addr1,shadowMemory.readMem((ADDRINT)addr1));
 	}
 
 	if(type2 & READ_OPERATOR_TYPE)
 	{
 		value = max(shadowMemory.readMem((ADDRINT)addr2), value);
-//		fprintf(trace,"R2[%p]=%ld\n",addr2,shadowMemory[(ADDRINT)addr2]);
+//		fprintf(trace,"R2[%p]=%ld\n",addr2,shadowMemory.readMem((ADDRINT)addr2));
 	}
 
 	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ip]);
@@ -570,6 +574,8 @@ VOID traceMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t
 	{
 		value = max(shadowMemory.readReg(current_instruction->registers_read[i]),value);
 	}
+
+//	fprintf(trace, "After all reads value = %ld\n", value);
 
 	if(value > 0)
 	{
@@ -754,8 +760,10 @@ VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
 	if(tracinglevel == 0 && (KnobTraceLimit.Value() != 0))
 	{
 		traceRegionCount++;
+	}
+	if(tracinglevel == 0)
 		clearState();
-	}	
+//	clearState();
 
 	tracinglevel++;
 	if(!KnobForFrontend)
