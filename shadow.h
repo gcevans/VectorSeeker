@@ -10,9 +10,10 @@ const int cacheLineSize = 128;
 class CacheLine
 {
 private:
-	enum elementSizes {one, two, four};
-	elementSizes elementSize;
-	void *memory;
+//	enum elementSizes {one, two, four};
+//	elementSizes elementSize;
+	long memorystore[cacheLineSize];
+	long *memory;
 public:
 	//read
 	long read(unsigned int offset);
@@ -20,6 +21,7 @@ public:
 	void write(unsigned int offset, long value);
 	//
 	CacheLine();
+	CacheLine(const CacheLine &s);
 	~CacheLine();
 };
 
@@ -28,6 +30,7 @@ class ShadowMemory
 private:
 	long shadowRegisters[XED_REG_LAST]; // Register Memory
 	map<ADDRINT,CacheLine> cacheShadowMemory;
+//	map<ADDRINT,long> shadowMemory;
 public:
 	//Access Memory
 	long readMem(ADDRINT address);

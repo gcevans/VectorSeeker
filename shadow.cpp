@@ -1,21 +1,38 @@
 #include "shadow.h"
 #include <assert.h>
+#include "tracer.h"
 
 CacheLine::CacheLine()
 {
-	elementSize = one;
-	memory = malloc(sizeof(unsigned char) * cacheLineSize);
+//	elementSize = one;
+//	memory = (long *) malloc(sizeof(long) * cacheLineSize);
+	memory = &memorystore[0];
+//	fprintf(stderr, "inital memory allocation = %p\n", memory);
+	for(int i = 0; i < cacheLineSize; i++)
+	{
+		memory[i] = 0;
+	}
 }
 
 CacheLine::~CacheLine()
 {
-	free(memory);
+//	free(memory);
+}
+
+CacheLine::CacheLine(const CacheLine &s)
+{
+	memory = &memorystore[0];
+	for(int i= 0; i < cacheLineSize; i++)
+	{
+		memory[i] = s.memory[i];
+	}
 }
 
 //read from cache line
 long CacheLine::read(unsigned int offset)
 {
-	switch (elementSize)
+	return memory[offset];
+/*	switch (elementSize)
 	{
 		case one:
 			{
@@ -35,11 +52,14 @@ long CacheLine::read(unsigned int offset)
 		default:
 			assert(false);
 	}
+	*/
 }
 
 //write to cache line
 void CacheLine::write(unsigned int offset,long depth)
 {	
+	memory[offset] = depth;
+	/*
 	switch (elementSize)
 	{
 		case one:
@@ -98,13 +118,16 @@ void CacheLine::write(unsigned int offset,long depth)
 		default:
 			assert(false);
 	}
+	*/
 }
 
 //Access Memory
 long ShadowMemory::readMem(ADDRINT address)
 {
-//	return shadowMemory[address];	
-	return cacheShadowMemory[address/cacheLineSize].read(address%cacheLineSize);
+//	long readval = shadowMemory[address];
+	long readval = cacheShadowMemory[address/cacheLineSize].read(address%cacheLineSize);
+//	fprintf(trace, "R[%p] = %ld\n", (void *)address, readval);
+	return readval;
 };
 //Access Register
 long ShadowMemory::readReg(size_t reg)
@@ -114,6 +137,7 @@ long ShadowMemory::readReg(size_t reg)
 //Set Memory
 void ShadowMemory::writeMem(ADDRINT address, long depth)
 {
+//	fprintf(trace, "W[%p] = %ld\n", (void *)address, depth);
 //	shadowMemory[address] = depth;
 	cacheShadowMemory[address/cacheLineSize].write(address%cacheLineSize, depth);
 };
@@ -129,5 +153,6 @@ void ShadowMemory::clear()
 {
 //	shadowMemory.clear();
 	cacheShadowMemory.clear();
+//	assert(cacheShadowMemory.size()==0);
 };
 
