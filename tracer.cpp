@@ -106,7 +106,7 @@ bool instructionLocationsDataPointerAddrSort(instructionLocationsData *a, instru
 // Globals
 map<ADDRINT,size_t> allocationMap;
 ShadowMemory shadowMemory;
-map<ADDRINT,instructionLocationsData > instructionLocations;
+unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
 unsigned tracinglevel;
 unsigned instructionCount;
 unsigned vectorInstructionCountSavings;
@@ -187,7 +187,7 @@ VOID writeLog()
 	if(!KnobForFrontend)
 		fprintf(trace, "#start instruction log\n");
 	
-	map<ADDRINT,instructionLocationsData >::iterator ipit;
+	unordered_map<ADDRINT,instructionLocationsData >::iterator ipit;
 	vector<instructionLocationsData *> profile_list;
 	map< string,map<int,vector<instructionLocationsData *> > >line_map;
 	vector<instructionLocationsData *> *current_line;
@@ -295,7 +295,7 @@ VOID writeOnOffLog()
 {
 	if(!KnobForFrontend)
 		fprintf(trace, "#start instruction log\n");
-	map<ADDRINT,instructionLocationsData >::iterator ipit;
+	unordered_map<ADDRINT,instructionLocationsData >::iterator ipit;
 	vector<instructionLocationsData *> profile_list;
 	map< string,map<int,vector<instructionLocationsData *> > >line_map;
 	vector<instructionLocationsData *> *current_line;
@@ -778,7 +778,7 @@ void clearRegisters()
 
 void clearVectors()
 {
-	map<ADDRINT,instructionLocationsData >::iterator it;
+	unordered_map<ADDRINT,instructionLocationsData >::iterator it;
 	for(it = instructionLocations.begin(); it != instructionLocations.end(); it++)
 	{
 		it->second.logged = false;

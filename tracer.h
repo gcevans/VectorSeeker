@@ -2,6 +2,7 @@
 #define TRACER_H
 #include <set>
 #include <map>
+#include <unordered_map>
 #include <list>
 #include "instlib.H"
 #include "shadow.h"
@@ -34,7 +35,7 @@ struct instructionDebugData
 
 // Globals
 extern ShadowMemory shadowMemory;
-extern map<ADDRINT,instructionLocationsData > instructionLocations;
+extern unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
 extern FILE * trace;
 
 
