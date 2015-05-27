@@ -115,7 +115,7 @@ int traceRegionCount;
 int InTraceFunction;
 FILE * trace;
 list<long long> loopStack;
-map<ADDRINT, ResultVector > instructionResults;
+unordered_map<ADDRINT, ResultVector > instructionResults;
 
 // Command line arguments
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
