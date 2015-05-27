@@ -33,7 +33,7 @@ inline bool sortByFirst(pair<long,long> i, pair<long,long> j)
 
 void ResultVector::sortedVectors(vector<pair<long,long> > &sorted_vectors)
 {
-	map<long,long>::iterator timeit;
+	unordered_map<long,long>::iterator timeit;
 	for(timeit = vectors.begin(); timeit != vectors.end(); timeit++)
 	{
 		sorted_vectors.push_back(std::make_pair(timeit->first,timeit->second));
@@ -44,7 +44,7 @@ void ResultVector::sortedVectors(vector<pair<long,long> > &sorted_vectors)
 
 bool ResultVector::vectorsGreater(int minVector)
 {
-	map<long,long>::iterator timeit;
+	unordered_map<long,long>::iterator timeit;
 	for(timeit = vectors.begin(); timeit != vectors.end(); timeit++)
 	{
 		if(timeit->second > minVector)

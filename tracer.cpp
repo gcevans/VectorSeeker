@@ -36,6 +36,7 @@ END_LEGAL */
 #include "tracer.h"
 #include "resultvector.h"
 #include <algorithm>
+#include <map>
 
 
 #define STATIC_CAST(x,y) ((x) (y))

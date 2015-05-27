@@ -1,24 +1,16 @@
 #ifndef resultvector_H
 #define resultvector_H
-#include <map>
 #include <vector>
+#include <unordered_map>
 
-using std::map;
+using std::unordered_map;
 using std::vector;
 using std::pair;
-
-struct StridedMemoryTrace
-{
-	long start;
-	long end;
-	long count;
-};
 
 class ResultVector
 {
 private:
-	map<long,long> vectors;
-//	map<long, StridedMemoryTrace> stridedVectors;
+	unordered_map<long,long> vectors;
 
 public:
 	void addToDepth(long depth);
@@ -27,6 +19,7 @@ public:
 	void sortedVectors(vector<pair<long,long> > &sorted_vectors);
 	bool vectorsGreater(int minVector);
 	void clear();
+	
 };
 
 #endif

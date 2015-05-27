@@ -1,7 +1,6 @@
 #ifndef TRACER_H
 #define TRACER_H
 #include <set>
-#include <map>
 #include <unordered_map>
 #include <list>
 #include "instlib.H"
