@@ -18,10 +18,12 @@ CacheLine::~CacheLine()
 	free(memory);
 }
 
-CacheLine::CacheLine(const CacheLine &s)
+CacheLine& CacheLine::operator=(const CacheLine& s)
 {
+	if(memory != NULL)
+		free(memory);
+
 	elementSize = s.elementSize;
-	memory = malloc(sizeof(long) * cacheLineSize);
 
 	switch (elementSize)
 	{
@@ -61,6 +63,13 @@ CacheLine::CacheLine(const CacheLine &s)
 		default:
 			assert(false);
 	}
+	return *this;
+}
+
+CacheLine::CacheLine(const CacheLine &s)
+{
+	memory = NULL;
+	*this = s;
 //	for(int i= 0; i < cacheLineSize; i++)
 //	{
 //		memory[i] = s.memory[i];

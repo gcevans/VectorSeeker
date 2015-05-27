@@ -22,6 +22,7 @@ public:
 	CacheLine();
 	CacheLine(const CacheLine &s);
 	~CacheLine();
+	CacheLine& operator=(const CacheLine& s);
 };
 
 class ShadowMemory
