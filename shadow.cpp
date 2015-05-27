@@ -4,62 +4,103 @@
 
 CacheLine::CacheLine()
 {
-//	elementSize = one;
-//	memory = (long *) malloc(sizeof(long) * cacheLineSize);
-	memory = &memorystore[0];
-//	fprintf(stderr, "inital memory allocation = %p\n", memory);
+	elementSize = one;
+	memory =  malloc(sizeof(unsigned char) * cacheLineSize);
+	unsigned char *ptr = (unsigned char *) memory;
 	for(int i = 0; i < cacheLineSize; i++)
 	{
-		memory[i] = 0;
+		ptr[i] = 0;
 	}
 }
 
 CacheLine::~CacheLine()
 {
-//	free(memory);
+	free(memory);
 }
 
 CacheLine::CacheLine(const CacheLine &s)
 {
-	memory = &memorystore[0];
-	for(int i= 0; i < cacheLineSize; i++)
+	elementSize = s.elementSize;
+	memory = malloc(sizeof(long) * cacheLineSize);
+
+	switch (elementSize)
 	{
-		memory[i] = s.memory[i];
+		case one:
+			{
+				memory =  malloc(sizeof(unsigned char) * cacheLineSize);
+				unsigned char *ptr = (unsigned char *) memory;
+				unsigned char *sptr = (unsigned char *) s.memory;
+				for(int i = 0; i < cacheLineSize; i++)
+				{
+					ptr[i] = sptr[i];
+				}
+			break;
+			}
+		case two:
+			{
+				memory =  malloc(sizeof(unsigned short) * cacheLineSize);
+				unsigned short *ptr = (unsigned short *) memory;
+				unsigned short *sptr = (unsigned short *) s.memory;
+				for(int i = 0; i < cacheLineSize; i++)
+				{
+					ptr[i] = sptr[i];
+				}
+			break;
+			}
+		case four:
+			{
+				memory = malloc(sizeof(long) * cacheLineSize);
+				long *ptr = (long *) memory;
+				long *sptr = (long *) s.memory;
+				for(int i = 0; i < cacheLineSize; i++)
+				{
+					ptr[i] = sptr[i];
+				}
+			break;
+			}
+		default:
+			assert(false);
 	}
+//	for(int i= 0; i < cacheLineSize; i++)
+//	{
+//		memory[i] = s.memory[i];
+//	}
 }
 
 //read from cache line
 long CacheLine::read(unsigned int offset)
 {
-	return memory[offset];
-/*	switch (elementSize)
+//	return memory[offset];
+	switch (elementSize)
 	{
 		case one:
 			{
 				unsigned char *ptr = (unsigned char *) memory;
 				return (long) ptr[offset];
 			}
+			break;
 		case two:
 			{
 				unsigned short *ptr = (unsigned short *) memory;
 				return (long) ptr[offset];
 			}
+			break;
 		case four:
 			{
 				long *ptr = (long *) memory;
 				return ptr[offset];
 			}
+			break;
 		default:
 			assert(false);
 	}
-	*/
 }
 
 //write to cache line
 void CacheLine::write(unsigned int offset,long depth)
 {	
-	memory[offset] = depth;
-	/*
+//	memory[offset] = depth;
+
 	switch (elementSize)
 	{
 		case one:
@@ -118,7 +159,6 @@ void CacheLine::write(unsigned int offset,long depth)
 		default:
 			assert(false);
 	}
-	*/
 }
 
 //Access Memory

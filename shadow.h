@@ -10,10 +10,9 @@ const int cacheLineSize = 128;
 class CacheLine
 {
 private:
-//	enum elementSizes {one, two, four};
-//	elementSizes elementSize;
-	long memorystore[cacheLineSize];
-	long *memory;
+	enum elementSizes {one, two, four};
+	elementSizes elementSize;
+	void *memory;
 public:
 	//read
 	long read(unsigned int offset);
