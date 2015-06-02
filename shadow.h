@@ -30,7 +30,7 @@ class ShadowMemory
 private:
 	long shadowRegisters[XED_REG_LAST]; // Register Memory
 	unordered_map<ADDRINT,CacheLine> cacheShadowMemory;
-//	map<ADDRINT,long> shadowMemory;
+//	unordered_map<ADDRINT,long> shadowMemory;
 public:
 	//Access Memory
 	long readMem(ADDRINT address);
@@ -39,9 +39,7 @@ public:
 	//Set Memory
 	void writeMem(ADDRINT address, long depth);
 	//Set Register
-	void writeReg(size_t reg, long depth);
-	//Reset Region
-	
+	void writeReg(size_t reg, long depth);	
 	//Clear
 	void clear();
 };
