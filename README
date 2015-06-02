@@ -2,7 +2,7 @@ Building Vector Seeker
 
 Edit Makefile to set PINPATH to the path to your pin instalation. Vector Seeker is currently building with pin-2.13-65163-gcc.4.4.7-linux.
 
-http://software.intel.com/sites/landingpage/pintool/downloads/pin-2.13-65163-gcc.4.4.7-linux.tar.gz
+http://software.intel.com/sites/landingpage/pintool/downloads/pin-2.14-71313-gcc.4.4.7-linux.tar.gz
 
 The target runtest will buid Vector Seeker and run on the very small test code mintest.cpp. This will produce an output file tracer.log.
 
