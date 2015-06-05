@@ -10,6 +10,12 @@ double *C;
 double *D;
 size_t *I;
 
+struct chunck
+{
+	 size_t start,end;
+	 double *data;
+};
+
 void init()
 {
 	for(int i = 0; i < COUNT; i++)
@@ -69,12 +75,36 @@ double reduction()
     return c;
 }
 
+void loop_bounds_dynamic(size_t start, size_t end, double *data, double *data2)
+{
+	for(size_t i = start; i <= end; i++)
+	{
+		data[i] = data[i]+data2[i]*2;
+	}
+}
+
 int main()
 {
 	A = (double *) malloc(sizeof(double) * COUNT * 10);
 	B = (double *) malloc(sizeof(double) * COUNT * 10);
 	C = (double *) malloc(sizeof(double) * COUNT * 10);
 	I = (size_t *) malloc(sizeof(size_t)*COUNT * 10);
+	chunck *chuncks = (chunck *) malloc (sizeof(chunck)*2);
+	chuncks[0].data = (double *) malloc(sizeof(double) * COUNT * 10);
+	chuncks[1].data = (double *) malloc(sizeof(double) * COUNT * 10);
+
+ for(size_t i = 0; i < COUNT*10; i++)
+	{
+		chuncks[0].data[i] = 1;
+		chuncks[1].data[i] = 1;
+	}
+
+	chuncks[0].start = COUNT;
+	chuncks[0].end = COUNT+COUNT;
+	chuncks[1].start = COUNT;
+	chuncks[1].end = COUNT+COUNT;
+
+	loop_bounds_dynamic(chuncks[0].start,chuncks[0].end,chuncks[0].data,chuncks[1].data);
 
 	init();
 	basic();
