@@ -729,6 +729,102 @@ VOID Routine(RTN rtn, VOID *v)
 	}
 }
 
+VOID Trace(TRACE pintrace, VOID *v)
+{
+    for (BBL bbl = TRACE_BblHead(pintrace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
+    {
+    	if(RTN_Valid(INS_Rtn(BBL_InsHead(bbl))))
+    	{
+	    	string rtn_name = RTN_Name(INS_Rtn(BBL_InsHead(bbl)));
+	    	if( (rtn_name != MALLOC) && (rtn_name != FREE))
+		    	for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins) )
+	    		if(INS_IsOriginal(ins))
+				{
+					instructionType insType;
+					ADDRINT ip = LEVEL_PINCLIENT::INS_Address(ins);
+					insType = decodeInstructionData(ip);
+					instructionLocations[ip].rtn_name = rtn_name;
+					if(insType == IGNORED_INS_TYPE)
+						continue;
+					if(insType == X87_INS_TYPE)
+					{
+						INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)handleX87Inst, IARG_INST_PTR, IARG_END);
+					}
+
+					// Instruments memory accesses using a predicated call, i.e.
+					// the instrumentation is called iff the instruction will actually be executed.
+					//
+					// The IA-64 architecture has explicitly predicated instructions. 
+					// On the IA-32 and Intel(R) 64 architectures conditional moves and REP 
+					// prefixed instructions appear as predicated instructions in Pin.
+					UINT32 memOperands = INS_MemoryOperandCount(ins);
+					
+					if(memOperands == 0)
+					{
+						if(!((insType == MOVEONLY_INS_TYPE) && KnobSkipMove))
+						{
+							INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)recoredBaseInst, IARG_INST_PTR, IARG_END);
+						}
+						else
+						{
+							INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)traceBaseInst, IARG_INST_PTR, IARG_END);
+						}
+					}
+					else if( memOperands < 3)
+					{
+						UINT32 addr1 = 0;
+						UINT32 type1 = NONE_OPERATOR_TYPE;
+						UINT32 addr2 = 0;
+						UINT32 type2 = NONE_OPERATOR_TYPE;
+						UINT32 memOp= 0;
+						
+						if(INS_MemoryOperandIsRead(ins, memOp))
+							type1 = type1 | READ_OPERATOR_TYPE;
+						if(INS_MemoryOperandIsWritten(ins, memOp))
+							type1 = type1 | WRITE_OPERATOR_TYPE;
+						
+						if(memOperands > 1)
+						{
+							memOp = 1;
+							if(INS_MemoryOperandIsRead(ins, memOp))
+								type2 = type2 | READ_OPERATOR_TYPE;
+							if(INS_MemoryOperandIsWritten(ins, memOp))
+								type2 = type2 | WRITE_OPERATOR_TYPE;
+						}
+
+						if(((insType == MOVEONLY_INS_TYPE) && KnobSkipMove))
+						{
+							INS_InsertPredicatedCall(
+								ins, IPOINT_BEFORE, (AFUNPTR)traceMemReadWrite,
+								IARG_INST_PTR,
+								IARG_MEMORYOP_EA, addr1,
+								IARG_UINT32, type1,
+								IARG_MEMORYOP_EA, addr2,
+								IARG_UINT32, type2,
+								IARG_END);
+						}
+						else
+						{
+							INS_InsertPredicatedCall(
+								ins, IPOINT_BEFORE, (AFUNPTR)RecordMemReadWrite,
+								IARG_INST_PTR,
+								IARG_MEMORYOP_EA, addr1,
+								IARG_UINT32, type1,
+								IARG_MEMORYOP_EA, addr2,
+								IARG_UINT32, type2,
+								IARG_END);
+						}			
+					}
+					else
+					{
+						INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)unhandledMemOp, IARG_INST_PTR, IARG_END);
+
+					}
+				}
+		}
+    }
+}
+
 // Malloc Stuff
 VOID MallocBefore(CHAR * name, ADDRINT size, THREADID threadid)
 {
@@ -792,7 +888,6 @@ void clearVectors()
 // Clear state to just initialized vectors
 VOID clearState()
 {
-	fprintf(trace, "Clear Started\n");
 	map<ADDRINT,size_t>::iterator it;
 	clearVectors();
 	clearRegisters();
@@ -804,7 +899,6 @@ VOID clearState()
 		for(size_t i = 0; i < allocationMap[start]; i++)
 			shadowMemory.writeMem(start+i, 1);
 	}
-	fprintf(trace, "State Cleared\n");
 }
 
 // tracing off
@@ -1049,7 +1143,6 @@ VOID ThreadStart(THREADID threadid, CONTEXT *ctxt, INT32 flags, VOID *v)
     PIN_SetThreadData(tls_key, tdata, threadid);
 }
 
-
 /* ===================================================================== */
 /* Print Help Message                                                    */
 /* ===================================================================== */
@@ -1068,19 +1161,20 @@ INT32 Usage()
 int main(int argc, char * argv[])
 {
     // Initialize pin
+    PIN_InitSymbols();
     if (PIN_Init(argc, argv)) return Usage();
 
+	// Initialize Xed decoder
 	xed_tables_init();
+
+	// Initialize VectorSeeker globals
+	trace = fopen(KnobOutputFile.Value().c_str(), "w");
 	tracinglevel = 0;
 	instructionCount = 0;
 	vectorInstructionCountSavings = 0;
 	traceRegionCount = 0;
-	clearRegisters();
 	loopStack.push_front(-1);
-
-	trace = fopen(KnobOutputFile.Value().c_str(), "w");
-
-    PIN_InitSymbols();
+	clearState();
 
     // Initialize the lock
     PIN_InitLock(&lock);
@@ -1090,11 +1184,11 @@ int main(int argc, char * argv[])
 	
     // Register ThreadStart to be called when a thread starts.
     PIN_AddThreadStartFunction(ThreadStart, 0);
-	
 
     // Register Instruction to be called to instrument instructions
+//	RTN_AddInstrumentFunction(Routine, 0);
 	IMG_AddInstrumentFunction(Image, 0);
-	RTN_AddInstrumentFunction(Routine, 0);
+	TRACE_AddInstrumentFunction(Trace, 0);
 
 
     // Register Fini to be called when the application exits
