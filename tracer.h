@@ -1,11 +1,10 @@
 #ifndef TRACER_H
 #define TRACER_H
-#include <set>
+#include "pin.H"
 #include <unordered_map>
 #include <list>
 #include "instlib.H"
 #include "shadow.h"
-#include "resultvector.h"
 
 struct instructionLocationsData
 {
