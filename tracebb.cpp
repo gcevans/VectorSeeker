@@ -17,3 +17,9 @@ VOID BBData::printBlock(FILE *out)
 	}
 	fprintf(out, "################\n");
 }
+
+VOID BBData::execute(vector<ADDRINT> &addrs)
+{
+
+	addrs.clear();
+}

@@ -12,6 +12,7 @@ class BBData
 public:
 	VOID pushInstruction(instructionLocationsData ins);
 	VOID printBlock(FILE *out);
+	VOID execute(vector<ADDRINT> &addrs);
 };
 
 #endif

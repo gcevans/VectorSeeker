@@ -118,6 +118,8 @@ FILE * trace;
 list<long long> loopStack;
 unordered_map<ADDRINT, ResultVector > instructionResults;
 unordered_map<ADDRINT, BBData> basicBlocks;
+vector<ADDRINT> rwAddressLog;
+ADDRINT lastBB;
 
 // Command line arguments
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
@@ -633,6 +635,15 @@ VOID traceMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t
 	instructionTracing(ip,addr1,value,"traceMemReadWrite");
 }
 
+VOID blockTracer(VOID *ip)
+{
+	if(tracinglevel && lastBB)
+	{
+		basicBlocks[lastBB].execute(rwAddressLog);
+		fprintf(trace, "BBL %p executed\n", (void *) lastBB);
+	}
+	lastBB = (ADDRINT) ip;
+}
 
 VOID Trace(TRACE pintrace, VOID *v)
 {
@@ -641,6 +652,8 @@ VOID Trace(TRACE pintrace, VOID *v)
     	// Only instrument instructions in a vaid RTN that is neither malloc or free
     	if(RTN_Valid(INS_Rtn(BBL_InsHead(bbl))))
     	{
+    		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)blockTracer, IARG_INST_PTR, IARG_END);
+
 	    	string rtn_name = RTN_Name(INS_Rtn(BBL_InsHead(bbl)));
 	    	if( (rtn_name != MALLOC) && (rtn_name != FREE))
 	    	{
@@ -812,6 +825,7 @@ VOID clearState()
 		for(size_t i = 0; i < allocationMap[start]; i++)
 			shadowMemory.writeMem(start+i, 1);
 	}
+	lastBB = NULL; //this may be the wrong place
 }
 
 // tracing off
@@ -898,13 +912,11 @@ VOID arrayMemClear(ADDRINT start)
 VOID loopStart(ADDRINT id)
 {
 	loopStack.push_front((long long) id);
-//	fprintf(trace,"Started loop = %lld\n", (long long) id);
 }
 
 VOID loopEnd(ADDRINT id)
 {
 	loopStack.pop_front();
-//	fprintf(trace,"Ended loop = %lld\n", (long long) id);
 }
 
 VOID MallocAfter(ADDRINT ret, THREADID threadid)
