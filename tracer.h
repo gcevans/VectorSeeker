@@ -3,6 +3,7 @@
 #include "pin.H"
 #include <unordered_map>
 #include <list>
+#include "tracer_decode.h"
 #include "instlib.H"
 #include "shadow.h"
 
@@ -18,7 +19,8 @@ struct instructionLocationsData
 	int line_number;
 	int col_number;
 	bool logged;
-//	string instruction;
+	instructionType type;
+	UINT32 memOperands;
 	string rtn_name;
 };
 

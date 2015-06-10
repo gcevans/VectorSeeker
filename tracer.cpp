@@ -673,12 +673,15 @@ VOID Trace(TRACE pintrace, VOID *v)
 	    		// insturment each instruction in the curent basic block
 		    	for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins) )
 		    	{
+					ADDRINT ip = LEVEL_PINCLIENT::INS_Address(ins);
 		    		if(INS_IsOriginal(ins))
 					{
 						instructionType insType;
-						ADDRINT ip = LEVEL_PINCLIENT::INS_Address(ins);
 						insType = decodeInstructionData(ip);
+						instructionLocations[ip].type = insType;
 						instructionLocations[ip].rtn_name = rtn_name;
+						UINT32 memOperands = INS_MemoryOperandCount(ins);
+
 						if(insType == IGNORED_INS_TYPE)
 							continue;
 						if(insType == X87_INS_TYPE)
@@ -692,7 +695,6 @@ VOID Trace(TRACE pintrace, VOID *v)
 						// The IA-64 architecture has explicitly predicated instructions. 
 						// On the IA-32 and Intel(R) 64 architectures conditional moves and REP 
 						// prefixed instructions appear as predicated instructions in Pin.
-						UINT32 memOperands = INS_MemoryOperandCount(ins);
 						
 						if(memOperands == 0)
 						{
@@ -757,6 +759,10 @@ VOID Trace(TRACE pintrace, VOID *v)
 						}
 						//push instruction on current basic block
 						basicBlocks[BBL_Address(bbl)].pushInstruction(instructionLocations[ip]);
+					}
+					else
+					{
+						fprintf(trace, "Instruction %p not original\n", (void *) ip);
 					}
 				}
 	    	}

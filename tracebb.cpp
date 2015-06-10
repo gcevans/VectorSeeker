@@ -25,7 +25,7 @@ VOID BBData::printBlock(FILE *out)
 
 VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs)
 {
-	fprintf(trace, "Executing Block\n");
+//	fprintf(trace, "Executing Block\n");
 	for(size_t i = 0; i < instructions.size(); i++)
 	{
 		//execute instruction
