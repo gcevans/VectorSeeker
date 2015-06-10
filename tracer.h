@@ -18,7 +18,7 @@ struct instructionLocationsData
 	int line_number;
 	int col_number;
 	bool logged;
-	string instruction;
+//	string instruction;
 	string rtn_name;
 };
 

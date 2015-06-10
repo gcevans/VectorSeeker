@@ -118,7 +118,7 @@ FILE * trace;
 list<long long> loopStack;
 unordered_map<ADDRINT, ResultVector > instructionResults;
 unordered_map<ADDRINT, BBData> basicBlocks;
-vector<ADDRINT> rwAddressLog;
+vector<pair<ADDRINT,UINT32> > rwAddressLog;
 ADDRINT lastBB;
 
 // Command line arguments
@@ -484,6 +484,10 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	if(tracinglevel == 0)
 		return;
 
+	rwAddressLog.push_back( make_pair((ADDRINT) addr1, t1) );
+	rwAddressLog.push_back( make_pair((ADDRINT) addr2, t2) );
+//	fprintf(trace, "two ops written for %p\n", ip);
+
 	instructionCount++;
 	
 	long value = 0;
@@ -568,6 +572,10 @@ VOID traceMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t
 	if(tracinglevel == 0)
 		return;
 
+	rwAddressLog.push_back( make_pair((ADDRINT) addr1, t1) );
+	rwAddressLog.push_back( make_pair((ADDRINT) addr2, t2) );
+//	fprintf(trace, "two ops written for %p\n", ip);
+
 	instructionCount++;
 	
 	long value = 0;
@@ -640,7 +648,12 @@ VOID blockTracer(VOID *ip)
 	if(tracinglevel && lastBB)
 	{
 		basicBlocks[lastBB].execute(rwAddressLog);
-		fprintf(trace, "BBL %p executed\n", (void *) lastBB);
+		basicBlocks[lastBB].addSuccessors((ADDRINT) ip);
+		if(KnobDebugTrace)
+		{
+			fprintf(trace, "BBL %p executed\n", (void *) lastBB);
+			basicBlocks[lastBB].printBlock(trace);
+		}
 	}
 	lastBB = (ADDRINT) ip;
 }
@@ -786,7 +799,6 @@ VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
 	}
 	if(tracinglevel == 0)
 		clearState();
-//	clearState();
 
 	tracinglevel++;
 	if(!KnobForFrontend)
@@ -826,6 +838,7 @@ VOID clearState()
 			shadowMemory.writeMem(start+i, 1);
 	}
 	lastBB = NULL; //this may be the wrong place
+	rwAddressLog.clear();
 }
 
 // tracing off
