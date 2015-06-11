@@ -649,7 +649,7 @@ VOID blockTracer(VOID *ip)
 	{
 		basicBlocks[lastBB].execute(rwAddressLog);
 		basicBlocks[lastBB].addSuccessors((ADDRINT) ip);
-		if(KnobDebugTrace)
+//		if(KnobDebugTrace)
 		{
 			fprintf(trace, "BBL %p executed\n", (void *) lastBB);
 			basicBlocks[lastBB].printBlock(trace);
@@ -665,11 +665,10 @@ VOID Trace(TRACE pintrace, VOID *v)
     	// Only instrument instructions in a vaid RTN that is neither malloc or free
     	if(RTN_Valid(INS_Rtn(BBL_InsHead(bbl))))
     	{
-    		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)blockTracer, IARG_INST_PTR, IARG_END);
-
 	    	string rtn_name = RTN_Name(INS_Rtn(BBL_InsHead(bbl)));
 	    	if( (rtn_name != MALLOC) && (rtn_name != FREE))
 	    	{
+	    		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)blockTracer, IARG_INST_PTR, IARG_END);
 	    		// insturment each instruction in the curent basic block
 		    	for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins) )
 		    	{
