@@ -83,6 +83,20 @@ void loop_bounds_dynamic(size_t start, size_t end, double *data, double *data2)
 	}
 }
 
+void caseloop()
+{
+	for(int i = 0; i < COUNT; i++)
+	{
+		switch(i)
+		{
+		case 1:
+			A[i] = B[i]+C[i];
+		default:
+			C[i] = B[i]+1;
+		}
+	}
+}
+
 int main()
 {
 	A = (double *) malloc(sizeof(double) * COUNT * 10);
@@ -115,6 +129,7 @@ int main()
 	init();
 	dependant();
 	basic2();
+//	caseloop();
 
     init();
     C[0] = reduction();
