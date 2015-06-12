@@ -3,6 +3,7 @@
 
 #include "tracer.h"
 #include "shadow.h"
+#include "instructions.h"
 
 #include <vector>
 #include <set>

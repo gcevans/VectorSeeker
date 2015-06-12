@@ -1,6 +1,7 @@
+
 #include "shadow.h"
+
 #include <assert.h>
-#include "tracer.h"
 
 CacheLine::CacheLine()
 {
