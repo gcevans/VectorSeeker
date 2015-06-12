@@ -5,6 +5,11 @@
 #include <list>	
 #include <vector>
 
+extern const UINT32 NONE_OPERATOR_TYPE;
+extern const UINT32 READ_OPERATOR_TYPE;
+extern const UINT32 WRITE_OPERATOR_TYPE;
+extern const UINT32 BOTH_OPERATOR_TYPE;
+
 enum instructionType { IGNORED_INS_TYPE, NORMAL_INS_TYPE, MOVEONLY_INS_TYPE, X87_INS_TYPE};
 
 struct instructionLocationsData

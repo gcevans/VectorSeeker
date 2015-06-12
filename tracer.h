@@ -6,8 +6,10 @@
 #include "resultvector.h"
 
 extern KNOB<bool> KnobDebugTrace;
-
 extern KNOB<bool> KnobSkipMove;
 
 extern unordered_map<ADDRINT, ResultVector > instructionResults;
+
+bool memIsArray(VOID *addr);
+
 #endif

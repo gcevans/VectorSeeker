@@ -689,7 +689,8 @@ VOID Trace(TRACE pintrace, VOID *v)
 						insType = decodeInstructionData(ip, instructionLocations);
 						instructionLocations[ip].type = insType;
 						instructionLocations[ip].rtn_name = rtn_name;
-						UINT32 memOperands = INS_MemoryOperandCount(ins);
+						UINT32 memOperands = INS_MemoryOperandCount(ins);\
+						instructionLocations[ip].memOperands = memOperands;
 
 						if(insType == IGNORED_INS_TYPE)
 							continue;
@@ -764,9 +765,9 @@ VOID Trace(TRACE pintrace, VOID *v)
 						}
 						else
 						{
-							INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)unhandledMemOp, IARG_INST_PTR, IARG_END);
-
+//							INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)unhandledMemOp, IARG_INST_PTR, IARG_END);
 						}
+
 						//push instruction on current basic block
 						basicBlocks[BBL_Address(bbl)].pushInstruction(instructionLocations[ip]);
 					}
