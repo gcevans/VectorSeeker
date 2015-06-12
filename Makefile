@@ -16,13 +16,13 @@ LOPTS = -g -std=gnu++0x -Wl,--hash-style=sysv -shared -Wl,-Bsymbolic -Wl,--versi
 
 all : tracer.so mintest deeploops mintest-nodebug
 
-tracer.o : tracer.cpp tracer.h tracerlib.h tracer_decode.h shadow.h resultvector.h tracebb.h
+tracer.o : tracer.cpp tracer.h tracerlib.h tracer_decode.h shadow.h resultvector.h tracebb.h instructions.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o tracer.o tracer.cpp
 
-tracer_decode.o : tracer_decode.cpp tracer_decode.h tracer.h
+tracer_decode.o : tracer_decode.cpp tracer_decode.h tracer.h instructions.h shadow.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o tracer_decode.o tracer_decode.cpp
 
-tracebb.o : tracebb.cpp tracer_decode.h tracer.h tracebb.h
+tracebb.o : tracebb.cpp tracer_decode.h tracer.h tracebb.h shadow.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o tracebb.o tracebb.cpp
 
 shadow.o : shadow.cpp shadow.h
@@ -34,12 +34,6 @@ resultvector.o : resultvector.cpp resultvector.h
 tracer.so : tracer.o tracer_decode.o shadow.o resultvector.o tracebb.o
 	$(CXX) $(LOPTS) $(LINKDIR1) -o tracer.so tracer.o tracer_decode.o shadow.o resultvector.o tracebb.o $(LINKDIR2) $(LIBS)
 	
-memmon.so : memmon.o
-	$(CXX) $(LOPTS) $(LINKDIR1) -o memmon.so memmon.o $(LINKDIR2) $(LIBS)
-	
-memmon.o : memmon.cpp memmon.h
-	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o memmon.o memmon.cpp
-
 mintest : mintest.o dummy.o tracerlib.o
 	$(CXX) -g -o mintest mintest.o dummy.o tracerlib.o
 

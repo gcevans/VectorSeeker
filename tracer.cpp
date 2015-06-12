@@ -34,8 +34,13 @@ END_LEGAL */
 #include "tracer_decode.h"
 #include "resultvector.h"
 #include "tracebb.h"
+#include "instructions.h"
+#include "tracer_decode.h"
+#include "shadow.h"
+
 #include <algorithm>
 #include <map>
+#include <unordered_map>
 #include <stdio.h>
 #include <assert.h>
 
@@ -57,6 +62,9 @@ END_LEGAL */
 #define MINTHRESHOLD 0
 #define MINVECTORWIDTH 100
 
+
+// Local Functions
+VOID clearState();
 
 // TLS globals
 static  TLS_KEY tls_key;
@@ -416,7 +424,7 @@ VOID recoredBaseInst(VOID *ip)
 	if(!KnobDebugTrace)
 	return;
 
-	instructionTracing(ip,NULL,value,"recoredBaseInst");
+	instructionTracing(ip,NULL,value,"recoredBaseInst",trace,shadowMemory);
 }
 
 VOID traceBaseInst(VOID *ip)
@@ -447,7 +455,7 @@ VOID traceBaseInst(VOID *ip)
 	if(!KnobDebugTrace)
 		return;
 	
-	instructionTracing(ip,NULL,value,"traceBaseInst");
+	instructionTracing(ip,NULL,value,"traceBaseInst",trace, shadowMemory);
 }
 
 
@@ -458,7 +466,7 @@ VOID handleX87Inst(VOID *ip)
 
 	instructionCount++;
 
-	instructionTracing(ip,NULL,0,"x87error");
+	instructionTracing(ip,NULL,0,"x87error",trace, shadowMemory);
 }
 
 VOID unhandledMemOp(VOID *ip)
@@ -468,7 +476,7 @@ VOID unhandledMemOp(VOID *ip)
 
 	instructionCount++;
 
-	instructionTracing(ip,NULL,0,"unhandledMemOp");
+	instructionTracing(ip,NULL,0,"unhandledMemOp",trace, shadowMemory);
 }
 
 const UINT32 NONE_OPERATOR_TYPE = 0;
@@ -561,7 +569,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	if(!KnobDebugTrace)
 		return;
 		
-	instructionTracing(ip,addr2,value,"RecordMemReadWrite");
+	instructionTracing(ip,addr2,value,"RecordMemReadWrite",trace, shadowMemory);
 }
 
 VOID traceMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t2)
@@ -640,16 +648,16 @@ VOID traceMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t
 	if(!KnobDebugTrace)
 		return;
 		
-	instructionTracing(ip,addr1,value,"traceMemReadWrite");
+	instructionTracing(ip,addr1,value,"traceMemReadWrite",trace, shadowMemory);
 }
 
 VOID blockTracer(VOID *ip)
 {
 	if(tracinglevel && lastBB)
 	{
-		basicBlocks[lastBB].execute(rwAddressLog);
+		basicBlocks[lastBB].execute(rwAddressLog, shadowMemory, trace);
 		basicBlocks[lastBB].addSuccessors((ADDRINT) ip);
-//		if(KnobDebugTrace)
+		if(KnobDebugTrace)
 		{
 			fprintf(trace, "BBL %p executed\n", (void *) lastBB);
 			basicBlocks[lastBB].printBlock(trace);
@@ -676,7 +684,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 		    		if(INS_IsOriginal(ins))
 					{
 						instructionType insType;
-						insType = decodeInstructionData(ip);
+						insType = decodeInstructionData(ip, instructionLocations);
 						instructionLocations[ip].type = insType;
 						instructionLocations[ip].rtn_name = rtn_name;
 						UINT32 memOperands = INS_MemoryOperandCount(ins);

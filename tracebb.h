@@ -2,7 +2,8 @@
 #define TRACEBB_H
 
 #include "tracer.h"
-#include "tracer_decode.h"
+#include "shadow.h"
+
 #include <vector>
 #include <set>
 
@@ -14,7 +15,7 @@ class BBData
 public:
 	VOID pushInstruction(instructionLocationsData ins);
 	VOID printBlock(FILE *out);
-	VOID execute(vector<pair<ADDRINT,UINT32> > &addrs);
+	VOID execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowMemory, FILE *out);
 	VOID addSuccessors(ADDRINT successor);
 };
 

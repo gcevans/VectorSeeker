@@ -1,9 +1,9 @@
+
+#include "tracer_decode.h"
+
 #include <stdio.h>
-#include "pin.H"
 #include <assert.h>
 #include "tracerlib.h"
-#include "tracer_decode.h"
-#include "tracer.h"
 
 
 #define STATIC_CAST(x,y) ((x) (y))
@@ -79,7 +79,7 @@ bool isZeroingInstruction(xed_decoded_inst_t *ins)
 }
 
 // Decode instruction at ip saving needed items to the instructionLocations map
-instructionType decodeInstructionData(ADDRINT ip)
+instructionType decodeInstructionData(ADDRINT ip, unordered_map<ADDRINT,instructionLocationsData > &instructionLocations)
 {
 	const xed_inst_t *xedins;
 	xed_decoded_inst_t ins;
@@ -235,7 +235,7 @@ instructionType decodeInstructionData(ADDRINT ip)
 }
 
 // Standard form of instruction tracing for debugging
-void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from)
+void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemory &shadowMemory )
 {
 	char decodeBuffer[1024];
 	xed_state_t dstate;
@@ -258,25 +258,25 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 	PIN_UnlockClient();
 
 
-	fprintf(trace, "%p:%d:%s - %s:%s\t\tOperands(%d)", ip,source_line, called_from, source_file.c_str(), decodeBuffer,numOperands);
+	fprintf(out, "%p:%d:%s - %s:%s\t\tOperands(%d)", ip,source_line, called_from, source_file.c_str(), decodeBuffer,numOperands);
 
 	for(int i = 0; i < numOperands; i++)
 	{
 		const xed_operand_t *curOp = xed_inst_operand(xedins, i);
-		fprintf(trace, "%d:", (i+1));
+		fprintf(out, "%d:", (i+1));
 		if(xed_operand_read(curOp) )
 		{
 			xed_operand_enum_t op_name = xed_operand_name(xed_inst_operand(xed_decoded_inst_inst(&ins),i));
 			if(xed_decoded_inst_get_reg(&ins, xed_operand_name(curOp)))
 			{
 				xed_reg_enum_t r = xed_decoded_inst_get_reg(&ins, op_name);
-				fprintf(trace,"r:%s=%ld ",xed_reg_enum_t2str(r),shadowMemory.readReg(r));
+				fprintf(out,"r:%s=%ld ",xed_reg_enum_t2str(r),shadowMemory.readReg(r));
 				if(r != XED_REG_CR0)
 					value = max(shadowMemory.readReg(r),value);
 			}
 			else
 			{
-				fprintf(trace,"r:not a regitster (%s)",xed_operand_enum_t2str(op_name));
+				fprintf(out,"r:not a regitster (%s)",xed_operand_enum_t2str(op_name));
 			}
 		}
 		if(xed_operand_written(curOp) )
@@ -285,18 +285,18 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 			if(xed_decoded_inst_get_reg(&ins, xed_operand_name(curOp)))
 			{
 				xed_reg_enum_t r = xed_decoded_inst_get_reg(&ins, op_name);
-				fprintf(trace,"w:%s=%ld ",xed_reg_enum_t2str(r),shadowMemory.readReg(r));
+				fprintf(out,"w:%s=%ld ",xed_reg_enum_t2str(r),shadowMemory.readReg(r));
 				if(r != XED_REG_CR0)
 					value = max(shadowMemory.readReg(r),value);
 			}
 			else
 			{
-				fprintf(trace, "w:not a register (%s)",xed_operand_enum_t2str(op_name));
+				fprintf(out, "w:not a register (%s)",xed_operand_enum_t2str(op_name));
 			}
 		}
 		if(!xed_operand_written(curOp) && !xed_operand_read(curOp))
 		{
-			fprintf(trace,"not read or written ");
+			fprintf(out,"not read or written ");
 		}
 	}
 	
@@ -304,31 +304,31 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 	{
 //		if( !xed_decoded_inst_mem_read(&ins,i) && !xed_decoded_inst_mem_written(&ins,i))
 		{
-			fprintf(trace, "mem op(");
+			fprintf(out, "mem op(");
 			xed_reg_enum_t seg = xed_decoded_inst_get_seg_reg(&ins,i);
 			xed_reg_enum_t base = xed_decoded_inst_get_base_reg(&ins,i);
 			xed_reg_enum_t index = xed_decoded_inst_get_index_reg(&ins,i);
 			if (seg != XED_REG_INVALID)
 			{
-				fprintf(trace, "seg=%s ",xed_reg_enum_t2str(seg));
+				fprintf(out, "seg=%s ",xed_reg_enum_t2str(seg));
 			}
 			if (base != XED_REG_INVALID)
 			{
-				fprintf(trace, "base=%s ",xed_reg_enum_t2str(base));
+				fprintf(out, "base=%s ",xed_reg_enum_t2str(base));
 			}
 			if (index != XED_REG_INVALID)
 			{
-				fprintf(trace, "index=%s ",xed_reg_enum_t2str(index));
+				fprintf(out, "index=%s ",xed_reg_enum_t2str(index));
 			}
-			fprintf(trace, ")");
+			fprintf(out, ")");
 			
 		}
 	}
 	
 	if(addr != NULL)
-		fprintf(trace, "addr=%p ",addr);
+		fprintf(out, "addr=%p ",addr);
 	
-	fprintf(trace, "value=%ld\n",value);
+	fprintf(out, "value=%ld\n",value);
 }
 
 

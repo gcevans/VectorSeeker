@@ -1,15 +1,15 @@
 #ifndef TRACER_DECODE_H
 #define TRACER_DECODE_H
 
-#include "instlib.H"
-
-enum instructionType { IGNORED_INS_TYPE, NORMAL_INS_TYPE, MOVEONLY_INS_TYPE, X87_INS_TYPE};
+#include "tracer.h"
+#include "shadow.h"
+#include "instructions.h"
 
 //Decode Instructions for tool saving data to instruction map
-instructionType decodeInstructionData(ADDRINT ip);
+instructionType decodeInstructionData(ADDRINT ip, unordered_map<ADDRINT,instructionLocationsData > &instructionLocations);
 
 //Decode Instructions for debug tracing
-void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from);
+void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemory &shadowMemory);
 
 //Get Human readable string for instruction
 VOID disassemblyToBuff(char * decodeBuffer, VOID *ip);

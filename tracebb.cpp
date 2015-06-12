@@ -11,7 +11,7 @@ VOID BBData::printBlock(FILE *out)
 {
 	if(instructions.size() == 0)
 	{
-		fprintf(out, "Empty Basic Block\n");
+		fprintf(out, "Empty Basic Block\n"); // probably a bare call
 	}
 	else
 	{
@@ -32,13 +32,13 @@ VOID BBData::printBlock(FILE *out)
 	fprintf(out, "################\n");
 }
 
-VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs)
+VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowMemory, FILE *out)
 {
-//	fprintf(trace, "Executing Block\n");
+//	fprintf(out, "Executing Block\n");
 	for(size_t i = 0; i < instructions.size(); i++)
 	{
 		//execute instruction
-//		fprintf(trace, "%s\n", instructions[i].instruction.c_str());
+//		fprintf(out, "%s\n", instructions[i].instruction.c_str());
 	}
 
 	addrs.clear();
