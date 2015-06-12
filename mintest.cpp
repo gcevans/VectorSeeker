@@ -129,7 +129,7 @@ int main()
 	init();
 	dependant();
 	basic2();
-//	caseloop();
+	caseloop();
 
     init();
     C[0] = reduction();
