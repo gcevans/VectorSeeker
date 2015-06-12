@@ -62,7 +62,6 @@ END_LEGAL */
 #define MINTHRESHOLD 0
 #define MINVECTORWIDTH 100
 
-
 // Local Functions
 VOID clearState();
 
@@ -85,7 +84,6 @@ thread_data_t* get_tls(THREADID threadid)
           static_cast<thread_data_t*>(PIN_GetThreadData(tls_key, threadid));
     return tdata;
 }
-
 
 bool sortBySecond(pair<long,long> i, pair<long,long> j)
 {
@@ -113,12 +111,14 @@ bool instructionLocationsDataPointerAddrSort(instructionLocationsData *a, instru
 	return(a->ip < b->ip);
 }
 
+// Shared Globals
+unsigned instructionCount;
+
 // Globals
+unsigned tracinglevel;
 map<ADDRINT,size_t> allocationMap;
 ShadowMemory shadowMemory;
 unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
-unsigned tracinglevel;
-unsigned instructionCount;
 unsigned vectorInstructionCountSavings;
 int traceRegionCount;
 int InTraceFunction;
@@ -128,7 +128,7 @@ unordered_map<ADDRINT, ResultVector > instructionResults;
 unordered_map<ADDRINT, BBData> basicBlocks;
 vector<pair<ADDRINT,UINT32> > rwAddressLog;
 ADDRINT lastBB;
-
+	
 // Command line arguments
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
     "o", "tracer.log", "specify output file name");
@@ -458,7 +458,7 @@ VOID traceBaseInst(VOID *ip)
 	instructionTracing(ip,NULL,value,"traceBaseInst",trace, shadowMemory);
 }
 
-
+/*
 VOID handleX87Inst(VOID *ip)
 {
 	if(tracinglevel == 0)
@@ -468,6 +468,8 @@ VOID handleX87Inst(VOID *ip)
 
 	instructionTracing(ip,NULL,0,"x87error",trace, shadowMemory);
 }
+
+*/
 
 VOID unhandledMemOp(VOID *ip)
 {
@@ -691,10 +693,11 @@ VOID Trace(TRACE pintrace, VOID *v)
 
 						if(insType == IGNORED_INS_TYPE)
 							continue;
-						if(insType == X87_INS_TYPE)
-						{
-							INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)handleX87Inst, IARG_INST_PTR, IARG_END);
-						}
+
+						// if(insType == X87_INS_TYPE)
+						// {
+						// 	INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)handleX87Inst, IARG_INST_PTR, IARG_END);
+						// }
 
 						// Instruments memory accesses using a predicated call, i.e.
 						// the instrumentation is called iff the instruction will actually be executed.

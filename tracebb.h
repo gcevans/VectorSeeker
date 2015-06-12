@@ -8,6 +8,8 @@
 #include <vector>
 #include <set>
 
+extern unsigned instructionCount;
+
 class BBData
 {
 	vector<instructionLocationsData> instructions;
