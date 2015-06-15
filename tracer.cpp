@@ -67,14 +67,19 @@ unsigned instructionCount;
 
 // Globals
 unsigned tracinglevel;
+int InTraceFunction;
+
 ShadowMemory shadowMemory;
+
 unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
+unordered_map<ADDRINT, ResultVector > instructionResults;
 unsigned vectorInstructionCountSavings;
 int traceRegionCount;
-int InTraceFunction;
+
 FILE * trace;
+
 list<long long> loopStack;
-unordered_map<ADDRINT, ResultVector > instructionResults;
+
 unordered_map<ADDRINT, BBData> basicBlocks;
 vector<pair<ADDRINT,UINT32> > rwAddressLog;
 ADDRINT lastBB;
