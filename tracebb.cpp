@@ -11,6 +11,7 @@ VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMem
 	instructionCount++;
 		
 	long value = 0;
+	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ins.ip]);
 	
 	for(unsigned int i = 0; i < ins.registers_read.size(); i++)
 	{
@@ -27,15 +28,15 @@ VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMem
 		shadowMemory.writeReg(ins.registers_written[i], value);
 	}
 	
-	if(value > 0 && (!((ins.type == MOVEONLY_INS_TYPE) && KnobSkipMove) ) )
+	if(value > 0)
 	{
 		instructionResults[ins.ip].addToDepth(value);
-		// ins->execution_count += 1;
-		// ins->loopid = loopStack;
+		current_instruction->execution_count += 1;
+		current_instruction->loopid = loopStack;
 //		fprintf(trace,"ins.loopid size = %d\n", (int) ins.loopid.size());
 	}
-	if(!KnobDebugTrace)
-	return;
+	// if(!KnobDebugTrace)
+	// 	return;
 
 	instructionTracing((VOID *)ins.ip,NULL,value,"recoredBaseInst",out,shadowMemory);
 }
@@ -115,8 +116,8 @@ VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one,
 		// current_instruction->loopid = loopStack;
 	}
 
-	if(!KnobDebugTrace)
-		return;
+	// if(!KnobDebugTrace)
+	// 	return;
 		
 	instructionTracing(ip,addr2,value,"RecordMemReadWrite",out, shadowMemory);
 }
@@ -165,6 +166,7 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 		// char buff[256];
 		// disassemblyToBuff(buff, (void *) instructions[i].ip);
 		// fprintf(out, "%s\n", buff);
+
 		//execute instruction
 		if(instructions[i].type == X87_INS_TYPE)
 		{
@@ -177,7 +179,7 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 		}
 		else if(instructions[i].memOperands < 3)
 		{
-			// handleMemInst(instructions[i], addrs[memOpsCount], addrs[memOpsCount+1], shadowMemory, out);
+			handleMemInst(instructions[i], addrs[memOpsCount], addrs[memOpsCount+1], shadowMemory, out);
 			memOpsCount += 2;
 		}
 		else
@@ -185,7 +187,6 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 			instructionTracing((VOID *) instructions[i].ip,NULL,0,"unhandledMemOp",out, shadowMemory);
 		}
 	}
-
 	addrs.clear();
 }
 

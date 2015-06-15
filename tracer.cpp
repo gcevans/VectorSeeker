@@ -210,12 +210,15 @@ VOID writeLog()
 
 	for(ipit = instructionLocations.begin(); ipit != instructionLocations.end(); ipit++)
 	{
+//		fprintf(trace, "Location %p\n", (VOID *) ipit->second.ip);
 		profile_list.push_back(&(ipit->second));
 		line_map[ipit->second.file_name][ipit->second.line_number].push_back(&(ipit->second));
 	}
 	
 	sort(profile_list.begin(),profile_list.end(),instructionLocationsDataPointerSort);
 	
+	assert(profile_list.size() > 0);
+
 	for(unsigned int i = 0; i < profile_list.size(); i++)
 	{	
 		linesFound = true;
@@ -414,7 +417,7 @@ VOID recoredBaseInst(VOID *ip)
 		shadowMemory.writeReg(current_instruction->registers_written[i], value);
 	}
 	
-	if(value > 0)
+	if(value > 0 && (!((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[(ADDRINT)ip].addToDepth(value);
 		current_instruction->execution_count += 1;
@@ -426,50 +429,6 @@ VOID recoredBaseInst(VOID *ip)
 
 	instructionTracing(ip,NULL,value,"recoredBaseInst",trace,shadowMemory);
 }
-
-VOID traceBaseInst(VOID *ip)
-{
-	if(tracinglevel == 0)
-		return;
-
-	instructionCount++;
-		
-	long value = 0;
-	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ip]);
-	
-	for(unsigned int i = 0; i < current_instruction->registers_read.size(); i++)
-	{
-		value = max(shadowMemory.readReg(current_instruction->registers_read[i]),value);
-	}
-	
-	if(value > 0)
-	{
-		value = value +1;
-	}
-
-	for(unsigned int i = 0; i < current_instruction->registers_written.size(); i++)
-	{
-		shadowMemory.writeReg(current_instruction->registers_written[i], value);
-	}
-
-	if(!KnobDebugTrace)
-		return;
-	
-	instructionTracing(ip,NULL,value,"traceBaseInst",trace, shadowMemory);
-}
-
-/*
-VOID handleX87Inst(VOID *ip)
-{
-	if(tracinglevel == 0)
-		return;
-
-	instructionCount++;
-
-	instructionTracing(ip,NULL,0,"x87error",trace, shadowMemory);
-}
-
-*/
 
 VOID unhandledMemOp(VOID *ip)
 {
@@ -561,7 +520,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 	value = max(max(value,region1),region2);
 
-	if(value > 0)
+	if(value > 0 && !(((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[(ADDRINT)ip].addToDepth(value);
 		current_instruction->execution_count += 1;
@@ -574,90 +533,11 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	instructionTracing(ip,addr2,value,"RecordMemReadWrite",trace, shadowMemory);
 }
 
-VOID traceMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t2)
-{
-	UINT32 type1 = t1;
-	UINT32 type2 = t2;
-
-	if(tracinglevel == 0)
-		return;
-
-	rwAddressLog.push_back( make_pair((ADDRINT) addr1, t1) );
-	rwAddressLog.push_back( make_pair((ADDRINT) addr2, t2) );
-//	fprintf(trace, "two ops written for %p\n", ip);
-
-	instructionCount++;
-	
-	long value = 0;
-	
-	if(type1 & READ_OPERATOR_TYPE)
-	{
-		value = shadowMemory.readMem((ADDRINT)addr1);
-//		fprintf(trace,"R1[%p]=%ld\n",addr1,shadowMemory.readMem((ADDRINT)addr1));
-	}
-
-	if(type2 & READ_OPERATOR_TYPE)
-	{
-		value = max(shadowMemory.readMem((ADDRINT)addr2), value);
-//		fprintf(trace,"R2[%p]=%ld\n",addr2,shadowMemory.readMem((ADDRINT)addr2));
-	}
-
-	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ip]);
-
-	for(unsigned int i = 0; i < current_instruction->registers_read.size(); i++)
-	{
-		value = max(shadowMemory.readReg(current_instruction->registers_read[i]),value);
-	}
-
-//	fprintf(trace, "After all reads value = %ld\n", value);
-
-	if(value > 0)
-	{
-		value = value +1;
-	}
-
-	for(unsigned int i = 0; i < current_instruction->registers_written.size(); i++)
-	{
-		shadowMemory.writeReg(current_instruction->registers_written[i], value);
-	}
-	
-	long region1 = 0;
-	long region2 = 0;
-	if(type1 & WRITE_OPERATOR_TYPE)
-	{
-		if(memIsArray(addr1))
-			region1 = 1;
-		else
-			region1 = 0;
-
-		shadowMemory.writeMem((ADDRINT)addr1, max(value,region1));
-//		fprintf(trace,"W1[%p]=%ld\n",addr1,shadowMemory[(ADDRINT)addr1]);
-	}
-
-	if(type2 & WRITE_OPERATOR_TYPE)
-	{
-		if(memIsArray(addr2))
-			region2 = 1;
-		else
-			region2 = 0;
-
-		shadowMemory.writeMem((ADDRINT)addr2, max(value,region2));
-//		fprintf(trace,"W2[%p]=%ld\n",addr2,shadowMemory[(ADDRINT)addr2]);
-	}
-
-	value = max(max(value,region1),region2);
-
-	if(!KnobDebugTrace)
-		return;
-		
-	instructionTracing(ip,addr1,value,"traceMemReadWrite",trace, shadowMemory);
-}
-
 VOID blockTracer(VOID *ip)
 {
 	if(tracinglevel && lastBB)
 	{
-		basicBlocks[lastBB].execute(rwAddressLog, shadowMemory, trace);
+//		basicBlocks[lastBB].execute(rwAddressLog, shadowMemory, trace);
 		basicBlocks[lastBB].addSuccessors((ADDRINT) ip);
 		if(KnobDebugTrace)
 		{
@@ -709,14 +589,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 						
 						if(memOperands == 0)
 						{
-							if(!((insType == MOVEONLY_INS_TYPE) && KnobSkipMove))
-							{
-								INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)recoredBaseInst, IARG_INST_PTR, IARG_END);
-							}
-							else
-							{
-								INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)traceBaseInst, IARG_INST_PTR, IARG_END);
-							}
+							INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)recoredBaseInst, IARG_INST_PTR, IARG_END);
 						}
 						else if( memOperands < 3)
 						{
@@ -740,28 +613,14 @@ VOID Trace(TRACE pintrace, VOID *v)
 									type2 = type2 | WRITE_OPERATOR_TYPE;
 							}
 
-							if(((insType == MOVEONLY_INS_TYPE) && KnobSkipMove))
-							{
-								INS_InsertPredicatedCall(
-									ins, IPOINT_BEFORE, (AFUNPTR)traceMemReadWrite,
-									IARG_INST_PTR,
-									IARG_MEMORYOP_EA, addr1,
-									IARG_UINT32, type1,
-									IARG_MEMORYOP_EA, addr2,
-									IARG_UINT32, type2,
-									IARG_END);
-							}
-							else
-							{
-								INS_InsertPredicatedCall(
-									ins, IPOINT_BEFORE, (AFUNPTR)RecordMemReadWrite,
-									IARG_INST_PTR,
-									IARG_MEMORYOP_EA, addr1,
-									IARG_UINT32, type1,
-									IARG_MEMORYOP_EA, addr2,
-									IARG_UINT32, type2,
-									IARG_END);
-							}			
+							INS_InsertPredicatedCall(
+								ins, IPOINT_BEFORE, (AFUNPTR)RecordMemReadWrite,
+								IARG_INST_PTR,
+								IARG_MEMORYOP_EA, addr1,
+								IARG_UINT32, type1,
+								IARG_MEMORYOP_EA, addr2,
+								IARG_UINT32, type2,
+								IARG_END);
 						}
 						else
 						{

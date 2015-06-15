@@ -7,8 +7,11 @@
 
 #include <vector>
 #include <set>
+#include <unordered_map>
 
 extern unsigned instructionCount;
+extern unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
+extern list<long long> loopStack;
 
 class BBData
 {
