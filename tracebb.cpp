@@ -28,17 +28,14 @@ VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMem
 		shadowMemory.writeReg(ins.registers_written[i], value);
 	}
 	
-	if(value > 0)
+	if(value > 0 && (!((ins.type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[ins.ip].addToDepth(value);
 		current_instruction->execution_count += 1;
 		current_instruction->loopid = loopStack;
-//		fprintf(trace,"ins.loopid size = %d\n", (int) ins.loopid.size());
 	}
-	// if(!KnobDebugTrace)
-	// 	return;
-
-	instructionTracing((VOID *)ins.ip,NULL,value,"recoredBaseInst",out,shadowMemory);
+	if(KnobDebugTrace)
+		instructionTracing((VOID *)ins.ip,NULL,value,"recoredBaseInst",out,shadowMemory);
 }
 
 VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one, pair<ADDRINT,UINT32>two, ShadowMemory &shadowMemory, FILE *out)
@@ -87,7 +84,7 @@ VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one,
 	long region2 = 0;
 	if(type1 & WRITE_OPERATOR_TYPE)
 	{
-		if(memIsArray(addr1))
+		if(shadowMemory.memIsArray(addr1))
 			region1 = 1;
 		else
 			region1 = 0;
@@ -98,7 +95,7 @@ VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one,
 
 	if(type2 & WRITE_OPERATOR_TYPE)
 	{
-		if(memIsArray(addr2))
+		if(shadowMemory.memIsArray(addr2))
 			region2 = 1;
 		else
 			region2 = 0;

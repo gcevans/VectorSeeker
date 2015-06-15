@@ -62,6 +62,23 @@ END_LEGAL */
 #define MINTHRESHOLD 0
 #define MINVECTORWIDTH 100
 
+// Shared Globals
+unsigned instructionCount;
+
+// Globals
+unsigned tracinglevel;
+ShadowMemory shadowMemory;
+unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
+unsigned vectorInstructionCountSavings;
+int traceRegionCount;
+int InTraceFunction;
+FILE * trace;
+list<long long> loopStack;
+unordered_map<ADDRINT, ResultVector > instructionResults;
+unordered_map<ADDRINT, BBData> basicBlocks;
+vector<pair<ADDRINT,UINT32> > rwAddressLog;
+ADDRINT lastBB;
+
 // Local Functions
 VOID clearState();
 
@@ -111,24 +128,6 @@ bool instructionLocationsDataPointerAddrSort(instructionLocationsData *a, instru
 	return(a->ip < b->ip);
 }
 
-// Shared Globals
-unsigned instructionCount;
-
-// Globals
-unsigned tracinglevel;
-map<ADDRINT,size_t> allocationMap;
-ShadowMemory shadowMemory;
-unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
-unsigned vectorInstructionCountSavings;
-int traceRegionCount;
-int InTraceFunction;
-FILE * trace;
-list<long long> loopStack;
-unordered_map<ADDRINT, ResultVector > instructionResults;
-unordered_map<ADDRINT, BBData> basicBlocks;
-vector<pair<ADDRINT,UINT32> > rwAddressLog;
-ADDRINT lastBB;
-	
 // Command line arguments
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
     "o", "tracer.log", "specify output file name");
@@ -174,26 +173,6 @@ KNOB<bool> KnobForShowNoFileInfo(KNOB_MODE_WRITEONCE, "pintool",
 
 KNOB<bool> KobForPrintBasicBlocks(KNOB_MODE_WRITEONCE, "pintool",
 	"b", "0", "print all basic blocks traced at end of log");
-
-bool memIsArray(VOID *addr)
-{
-	map<ADDRINT,size_t> ::iterator it;
-	it = allocationMap.upper_bound((ADDRINT) addr);
-	
-	if((*it).first == (ADDRINT)addr)
-	{
-		return true;
-	}
-	else if(it != allocationMap.begin())
-	{
-		it--;
-		if((size_t)(*it).first + (*it).second > (size_t)addr)
-		{
-			return true;
-		}
-	}
-	return false;
-}
 
 VOID writeLog()
 {
@@ -422,22 +401,9 @@ VOID recoredBaseInst(VOID *ip)
 		instructionResults[(ADDRINT)ip].addToDepth(value);
 		current_instruction->execution_count += 1;
 		current_instruction->loopid = loopStack;
-//		fprintf(trace,"current_instruction->loopid size = %d\n", (int) current_instruction->loopid.size());
 	}
-	if(!KnobDebugTrace)
-	return;
-
-	instructionTracing(ip,NULL,value,"recoredBaseInst",trace,shadowMemory);
-}
-
-VOID unhandledMemOp(VOID *ip)
-{
-	if(tracinglevel == 0)
-		return;
-
-	instructionCount++;
-
-	instructionTracing(ip,NULL,0,"unhandledMemOp",trace, shadowMemory);
+	if(KnobDebugTrace)
+		instructionTracing(ip,NULL,value,"recoredBaseInst",trace,shadowMemory);
 }
 
 const UINT32 NONE_OPERATOR_TYPE = 0;
@@ -498,7 +464,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	long region2 = 0;
 	if(type1 & WRITE_OPERATOR_TYPE)
 	{
-		if(memIsArray(addr1))
+		if(shadowMemory.memIsArray(addr1))
 			region1 = 1;
 		else
 			region1 = 0;
@@ -509,7 +475,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 	if(type2 & WRITE_OPERATOR_TYPE)
 	{
-		if(memIsArray(addr2))
+		if(shadowMemory.memIsArray(addr2))
 			region2 = 1;
 		else
 			region2 = 0;
@@ -563,6 +529,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 		    	for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins) )
 		    	{
 					ADDRINT ip = LEVEL_PINCLIENT::INS_Address(ins);
+
 		    		if(INS_IsOriginal(ins))
 					{
 						instructionType insType;
@@ -574,11 +541,6 @@ VOID Trace(TRACE pintrace, VOID *v)
 
 						if(insType == IGNORED_INS_TYPE)
 							continue;
-
-						// if(insType == X87_INS_TYPE)
-						// {
-						// 	INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)handleX87Inst, IARG_INST_PTR, IARG_END);
-						// }
 
 						// Instruments memory accesses using a predicated call, i.e.
 						// the instrumentation is called iff the instruction will actually be executed.
@@ -622,10 +584,6 @@ VOID Trace(TRACE pintrace, VOID *v)
 								IARG_UINT32, type2,
 								IARG_END);
 						}
-						else
-						{
-//							INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)unhandledMemOp, IARG_INST_PTR, IARG_END);
-						}
 
 						//push instruction on current basic block
 						basicBlocks[BBL_Address(bbl)].pushInstruction(instructionLocations[ip]);
@@ -654,13 +612,8 @@ VOID FreeBefore(CHAR * name, ADDRINT start, THREADID threadid)
 {
 	if(KnobSupressMalloc)
 		return;
-	if(tracinglevel)
-	{
-		for(size_t i = 0; i < allocationMap[start]; i++)
-			shadowMemory.writeMem(start+i, 0);		
-	}
-		
-	allocationMap.erase(start);
+
+	shadowMemory.arrayMemClear(start);
 }
 
 // tracing on
@@ -681,12 +634,6 @@ VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
 	    fprintf(trace,"tracing turned on\n");
 }
 
-void clearRegisters()
-{
-	for(int i = 0; i < XED_REG_LAST; i++)
-		shadowMemory.writeReg(i, 0);
-}
-
 void clearVectors()
 {
 	unordered_map<ADDRINT,instructionLocationsData >::iterator it;
@@ -696,23 +643,13 @@ void clearVectors()
 		it->second.execution_count = 0;
 	}
 	instructionResults.clear();
-
 }
 
 // Clear state to just initialized vectors
 VOID clearState()
 {
-	map<ADDRINT,size_t>::iterator it;
 	clearVectors();
-	clearRegisters();
 	shadowMemory.clear();
-	// Set Vector Memory
-	for(it = allocationMap.begin(); it != allocationMap.end(); it++)
-	{
-		size_t start = it->first;
-		for(size_t i = 0; i < allocationMap[start]; i++)
-			shadowMemory.writeMem(start+i, 1);
-	}
 	lastBB = NULL; //this may be the wrong place
 	rwAddressLog.clear();
 }
@@ -778,13 +715,9 @@ VOID arrayMem(ADDRINT start, size_t size)
 {
 	if(KnobMallocPrinting)
 		fprintf(trace,"Memory Allocation Found start = %p size = %p\n", (void *) start, (void *) size);
+
+	shadowMemory.arrayMem(start, size, tracinglevel);
 	
-	if(size > 0)
-		allocationMap[start] = size;
-	
-	if(tracinglevel)
-		for(size_t i = 0; i < size; i++)
-			shadowMemory.writeMem(start+i, 1);
 }
 
 VOID arrayMemClear(ADDRINT start)
@@ -792,10 +725,7 @@ VOID arrayMemClear(ADDRINT start)
 	if(KnobMallocPrinting)
 		fprintf(trace,"Memory Allocation Found cleared = %p\n", (void *) start);
 
-	for(size_t i = 0; i < allocationMap[start]; i++)
-		shadowMemory.writeMem(start+i, 0);
-	
-	allocationMap.erase(start);
+	shadowMemory.arrayMemClear(start);
 }
 
 VOID loopStart(ADDRINT id)
@@ -817,11 +747,7 @@ VOID MallocAfter(ADDRINT ret, THREADID threadid)
 		
 	//Map version
 	if(tdata->malloc_size > 0)
-		allocationMap[ret] = tdata->malloc_size;
-		
-	if(tracinglevel > 0)
-		for(size_t i = 0; i < allocationMap[ret]; i++)
-			shadowMemory.writeMem(ret+i, 1);
+		shadowMemory.arrayMem(ret, tdata->malloc_size, tracinglevel);
 
 	if(KnobMallocPrinting)
 	    fprintf(trace,"malloc returns %p of size(%p)\n",(void *)ret,(void *)tdata->malloc_size);

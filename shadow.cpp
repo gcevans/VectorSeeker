@@ -201,8 +201,51 @@ void ShadowMemory::writeReg(size_t reg, long depth)
 //Clear
 void ShadowMemory::clear()
 {
-//	shadowMemory.clear();
+	for(int i = 0; i < XED_REG_LAST; i++)
+	{
+		shadowRegisters[i] = 0;
+	}
+
 	cacheShadowMemory.clear();
-//	assert(cacheShadowMemory.size()==0);
+
+	for(auto it = allocationMap.begin(); it != allocationMap.end(); it++)
+	{
+		size_t start = it->first;
+		for(size_t i = 0; i < allocationMap[start]; i++)
+			this->writeMem(start+i, 1);
+	}
+
 };
+
+void ShadowMemory::arrayMem(ADDRINT start, size_t size,bool tracinglevel)
+{
+	if(size > 0)
+		allocationMap[start] = size;
+	
+	if(tracinglevel)
+		for(size_t i = 0; i < size; i++)
+			this->writeMem(start+i, 1);
+}
+
+void ShadowMemory::arrayMemClear(ADDRINT start)
+{
+	for(size_t i = 0; i < allocationMap[start]; i++)
+		this->writeMem(start+i, 0);
+	
+	allocationMap.erase(start);
+}
+
+bool ShadowMemory::memIsArray(VOID *addr)
+{
+	for(auto it = allocationMap.begin(); it != allocationMap.end(); it++)
+	{
+		if( ( (size_t) addr >= (size_t)(*it).first) && ((size_t)(*it).first + (*it).second > (size_t)addr) )
+		{
+			return true;
+		}
+
+	}
+	return false;
+}
+
 
