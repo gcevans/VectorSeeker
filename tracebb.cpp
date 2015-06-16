@@ -8,6 +8,11 @@ extern unsigned instructionCount;
 
 VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMemory, FILE *out)
 {
+	// char buff[256];
+	// disassemblyToBuff(buff, (void *) ins.ip);
+	// fprintf(out, "%p\t%s\n", (void *) ins.ip, buff);
+	return;
+
 	instructionCount++;
 		
 	long value = 0;
@@ -41,6 +46,12 @@ VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMem
 VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one, pair<ADDRINT,UINT32>two, ShadowMemory &shadowMemory, FILE *out)
 //VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t2)
 {
+
+	// char buff[256];
+	// disassemblyToBuff(buff, (void *) ins.ip);
+	// fprintf(out, "%p\t%s\n", (void *) ins.ip, buff);
+	return;
+
 	VOID *ip = (VOID *) ins.ip;
 	VOID *addr1 = (VOID *) one.first;
 	UINT32 type1 = one.second;
@@ -156,15 +167,15 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 
 	size_t memOpsCount = 0;
 
-	// fprintf(out, "Executing Block %p\n", (void *) instructions.front().ip);
+	// fprintf(out, "Executing Block %p with %d instructions expected %d\n", (void *) instructions.front().ip, (int) instructions.size(), expected_num_ins);
 	for(size_t i = 0; i < instructions.size(); i++)
 	{
-		instructionCount++;
+		// instructionCount++;
 		// char buff[256];
 		// disassemblyToBuff(buff, (void *) instructions[i].ip);
-		// fprintf(out, "%s\n", buff);
+		// fprintf(out, "%p\t%s\n", (void *) instructions[i].ip, buff);
 
-		//execute instruction
+		// execute instruction
 		if(instructions[i].type == X87_INS_TYPE)
 		{
 			instructionTracing((VOID *) instructions[i].ip, NULL, 0, "x87error", out, shadowMemory);
@@ -176,6 +187,7 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 		}
 		else if(instructions[i].memOperands < 3)
 		{
+			assert( (memOpsCount+2) <= addrs.size());
 			handleMemInst(instructions[i], addrs[memOpsCount], addrs[memOpsCount+1], shadowMemory, out);
 			memOpsCount += 2;
 		}
@@ -185,6 +197,7 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 		}
 	}
 	addrs.clear();
+	// fprintf(out, "Done Executing Block Ending %p\n", (void *) instructions.back().ip);
 }
 
 VOID BBData::addSuccessors(ADDRINT s)

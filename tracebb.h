@@ -19,6 +19,7 @@ class BBData
 	set<ADDRINT> successors;
 
 public:
+	USIZE expected_num_ins;
 	VOID pushInstruction(instructionLocationsData ins);
 	VOID printBlock(FILE *out);
 	VOID execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowMemory, FILE *out);

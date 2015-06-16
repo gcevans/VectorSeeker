@@ -83,6 +83,10 @@ list<long long> loopStack;
 unordered_map<ADDRINT, BBData> basicBlocks;
 vector<pair<ADDRINT,UINT32> > rwAddressLog;
 ADDRINT lastBB;
+ADDRINT UBBID;
+
+// BBL Debug Globals
+FILE *bbl_log;
 
 // Local Functions
 VOID clearState();
@@ -381,6 +385,10 @@ VOID recoredBaseInst(VOID *ip)
 	if(tracinglevel == 0)
 		return;
 
+	// char buff[256];
+	// disassemblyToBuff(buff, (void *) ip);
+	// fprintf(trace, "%p\t%s\n", (void *) ip, buff);
+
 	instructionCount++;
 		
 	long value = 0;
@@ -423,6 +431,10 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 	if(tracinglevel == 0)
 		return;
+
+	// char buff[256];
+	// disassemblyToBuff(buff, (void *) ip);
+	// fprintf(trace, "%p\t%s\n", (void *) ip, buff);
 
 	rwAddressLog.push_back( make_pair((ADDRINT) addr1, t1) );
 	rwAddressLog.push_back( make_pair((ADDRINT) addr2, t2) );
@@ -504,11 +516,13 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	instructionTracing(ip,addr2,value,"RecordMemReadWrite",trace, shadowMemory);
 }
 
-VOID blockTracer(VOID *ip)
+VOID blockTracer(VOID *ip, ADDRINT id)
 {
+	assert(basicBlocks.find(id) != basicBlocks.end());
 	if(tracinglevel && lastBB)
 	{
-//		basicBlocks[lastBB].execute(rwAddressLog, shadowMemory, trace);
+		// fprintf(trace, "Call UBBID %p\n", (void *) lastBB );
+		basicBlocks[lastBB].execute(rwAddressLog, shadowMemory, trace);
 		basicBlocks[lastBB].addSuccessors((ADDRINT) ip);
 		if(KnobDebugTrace)
 		{
@@ -516,7 +530,18 @@ VOID blockTracer(VOID *ip)
 			basicBlocks[lastBB].printBlock(trace);
 		}
 	}
-	lastBB = (ADDRINT) ip;
+	lastBB = id;
+}
+
+
+void logBasicBlock(BBL bbl, ADDRINT id)
+{
+	fprintf(bbl_log, "Basic Block starting at %p ending %p with Addresss %p UBBID %p\n",(void *) INS_Address(BBL_InsHead(bbl)), (void *) INS_Address(BBL_InsTail(bbl)), (void *) BBL_Address(bbl), (void *) id);
+	for(auto ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins) )
+	{
+		fprintf(bbl_log, "%p\t%s\n", (void *) INS_Address(ins), INS_Disassemble(ins).c_str());
+	}
+	fprintf(bbl_log, "Baisc Block Finished\n");
 }
 
 VOID Trace(TRACE pintrace, VOID *v)
@@ -529,73 +554,83 @@ VOID Trace(TRACE pintrace, VOID *v)
 	    	string rtn_name = RTN_Name(INS_Rtn(BBL_InsHead(bbl)));
 	    	if( (rtn_name != MALLOC) && (rtn_name != FREE))
 	    	{
-	    		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)blockTracer, IARG_INST_PTR, IARG_END);
-	    		// insturment each instruction in the curent basic block
-		    	for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins) )
-		    	{
-					ADDRINT ip = LEVEL_PINCLIENT::INS_Address(ins);
+	    		if(BBL_Original(bbl))
+	    		{
+	    			UBBID++;
+	    			logBasicBlock(bbl, UBBID);
+		    		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)blockTracer, IARG_INST_PTR, IARG_ADDRINT, UBBID, IARG_END);
+		    		basicBlocks[UBBID].expected_num_ins = BBL_NumIns(bbl);
+		    		// insturment each instruction in the curent basic block
+			    	for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins) )
+			    	{
+						ADDRINT ip = INS_Address(ins);
 
-		    		if(INS_IsOriginal(ins))
-					{
-						instructionType insType;
-						insType = decodeInstructionData(ip, instructionLocations);
-						instructionLocations[ip].type = insType;
-						instructionLocations[ip].rtn_name = rtn_name;
-						UINT32 memOperands = INS_MemoryOperandCount(ins);\
-						instructionLocations[ip].memOperands = memOperands;
-
-						if(insType == IGNORED_INS_TYPE)
-							continue;
-
-						// Instruments memory accesses using a predicated call, i.e.
-						// the instrumentation is called iff the instruction will actually be executed.
-						//
-						// The IA-64 architecture has explicitly predicated instructions. 
-						// On the IA-32 and Intel(R) 64 architectures conditional moves and REP 
-						// prefixed instructions appear as predicated instructions in Pin.
-						
-						if(memOperands == 0)
+			    		if(INS_IsOriginal(ins))
 						{
-							INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)recoredBaseInst, IARG_INST_PTR, IARG_END);
-						}
-						else if( memOperands < 3)
-						{
-							UINT32 addr1 = 0;
-							UINT32 type1 = NONE_OPERATOR_TYPE;
-							UINT32 addr2 = 0;
-							UINT32 type2 = NONE_OPERATOR_TYPE;
-							UINT32 memOp= 0;
+							instructionType insType;
+							insType = decodeInstructionData(ip, instructionLocations);
+							instructionLocations[ip].type = insType;
+							instructionLocations[ip].rtn_name = rtn_name;
+							UINT32 memOperands = INS_MemoryOperandCount(ins);
+							instructionLocations[ip].memOperands = memOperands;
+
+							if(insType == IGNORED_INS_TYPE)
+								continue;
+
+							// Instruments memory accesses using a predicated call, i.e.
+							// the instrumentation is called iff the instruction will actually be executed.
+							//
+							// The IA-64 architecture has explicitly predicated instructions. 
+							// On the IA-32 and Intel(R) 64 architectures conditional moves and REP 
+							// prefixed instructions appear as predicated instructions in Pin.
 							
-							if(INS_MemoryOperandIsRead(ins, memOp))
-								type1 = type1 | READ_OPERATOR_TYPE;
-							if(INS_MemoryOperandIsWritten(ins, memOp))
-								type1 = type1 | WRITE_OPERATOR_TYPE;
-							
-							if(memOperands > 1)
+							if(memOperands == 0)
 							{
-								memOp = 1;
+								INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)recoredBaseInst, IARG_INST_PTR, IARG_END);
+							}
+							else if( memOperands < 3)
+							{
+								UINT32 addr1 = 0;
+								UINT32 type1 = NONE_OPERATOR_TYPE;
+								UINT32 addr2 = 0;
+								UINT32 type2 = NONE_OPERATOR_TYPE;
+								UINT32 memOp= 0;
+								
 								if(INS_MemoryOperandIsRead(ins, memOp))
-									type2 = type2 | READ_OPERATOR_TYPE;
+									type1 = type1 | READ_OPERATOR_TYPE;
 								if(INS_MemoryOperandIsWritten(ins, memOp))
-									type2 = type2 | WRITE_OPERATOR_TYPE;
+									type1 = type1 | WRITE_OPERATOR_TYPE;
+								
+								if(memOperands > 1)
+								{
+									memOp = 1;
+									if(INS_MemoryOperandIsRead(ins, memOp))
+										type2 = type2 | READ_OPERATOR_TYPE;
+									if(INS_MemoryOperandIsWritten(ins, memOp))
+										type2 = type2 | WRITE_OPERATOR_TYPE;
+								}
+
+								INS_InsertPredicatedCall(
+									ins, IPOINT_BEFORE, (AFUNPTR)RecordMemReadWrite,
+									IARG_INST_PTR,
+									IARG_MEMORYOP_EA, addr1,
+									IARG_UINT32, type1,
+									IARG_MEMORYOP_EA, addr2,
+									IARG_UINT32, type2,
+									IARG_END);
+							}
+							else
+							{
+								assert(false);
 							}
 
-							INS_InsertPredicatedCall(
-								ins, IPOINT_BEFORE, (AFUNPTR)RecordMemReadWrite,
-								IARG_INST_PTR,
-								IARG_MEMORYOP_EA, addr1,
-								IARG_UINT32, type1,
-								IARG_MEMORYOP_EA, addr2,
-								IARG_UINT32, type2,
-								IARG_END);
+							//push instruction on current basic block
+							basicBlocks[UBBID].pushInstruction(instructionLocations[ip]);
 						}
-
-						//push instruction on current basic block
-						basicBlocks[BBL_Address(bbl)].pushInstruction(instructionLocations[ip]);
-					}
-					else
-					{
-						fprintf(trace, "Instruction %p not original\n", (void *) ip);
+						else
+						{
+							fprintf(trace, "Instruction %p not original\n", (void *) ip);
+						}
 					}
 				}
 	    	}
@@ -655,6 +690,7 @@ VOID clearState()
 {
 	clearVectors();
 	shadowMemory.clear();
+	
 	lastBB = NULL; //this may be the wrong place
 	rwAddressLog.clear();
 }
@@ -914,6 +950,8 @@ int main(int argc, char * argv[])
 
 	// Initialize VectorSeeker globals
 	trace = fopen(KnobOutputFile.Value().c_str(), "w");
+	bbl_log = fopen("bbl.log", "w");
+	UBBID = 0;
 	tracinglevel = 0;
 	instructionCount = 0;
 	vectorInstructionCountSavings = 0;
