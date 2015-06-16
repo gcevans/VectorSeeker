@@ -124,10 +124,9 @@ VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one,
 		// current_instruction->loopid = loopStack;
 	}
 
-	// if(!KnobDebugTrace)
-	// 	return;
-		
-	instructionTracing(ip,addr2,value,"RecordMemReadWrite",out, shadowMemory);
+	if(KnobDebugTrace)
+		instructionTracing(ip,addr2,value,"RecordMemReadWrite",out, shadowMemory);
+
 }
 
 VOID BBData::pushInstruction(instructionLocationsData ins)
@@ -187,7 +186,13 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 		}
 		else if(instructions[i].memOperands < 3)
 		{
-			assert( (memOpsCount+2) <= addrs.size());
+			if( (memOpsCount+2) > addrs.size())
+			{
+				// fprintf(out, "incomplete block data\n");
+				// this->printBlock(out);
+				break;
+			}
+
 			handleMemInst(instructions[i], addrs[memOpsCount], addrs[memOpsCount+1], shadowMemory, out);
 			memOpsCount += 2;
 		}

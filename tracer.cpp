@@ -518,7 +518,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 VOID blockTracer(VOID *ip, ADDRINT id)
 {
-	assert(basicBlocks.find(id) != basicBlocks.end());
+//	assert(basicBlocks.find(id) != basicBlocks.end());
 	if(tracinglevel && lastBB)
 	{
 		// fprintf(trace, "Call UBBID %p\n", (void *) lastBB );
@@ -703,6 +703,7 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 
 	if(!KnobForFrontend)
 	    fprintf(trace,"tracing turned off\n");
+
 	if(tracinglevel < 1)
 	{
 		if(!KnobForFrontend)
@@ -710,6 +711,7 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 	}
 	else if(tracinglevel == 1)
 	{
+		blockTracer(NULL, 0);
 		shadowMemory.clear();
 		if(!KnobVectorLineSummary)
 		{
