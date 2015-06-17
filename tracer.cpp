@@ -181,7 +181,10 @@ KNOB<bool> KnobForShowNoFileInfo(KNOB_MODE_WRITEONCE, "pintool",
 	"show-all", "0", "show instrucions with no file info");
 
 KNOB<bool> KobForPrintBasicBlocks(KNOB_MODE_WRITEONCE, "pintool",
-	"b", "0", "print all basic blocks traced at end of log");
+	"print-bb", "0", "print all basic blocks traced at end of log");
+
+KNOB<bool> KnobBBVerstion(KNOB_MODE_WRITEONCE, "pintool",
+	"bb", "0", "Use PIN basic block mode");
 
 VOID writeLog()
 {
@@ -439,7 +442,8 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	rwAddressLog.push_back( make_pair((ADDRINT) addr1, t1) );
 	rwAddressLog.push_back( make_pair((ADDRINT) addr2, t2) );
 	// fprintf(trace, "two ops written for %p\n", ip);
-	// return;
+	if(KnobBBVerstion)
+		return;
 
 	instructionCount++;
 	
@@ -587,7 +591,8 @@ VOID Trace(TRACE pintrace, VOID *v)
 							
 							if(memOperands == 0)
 							{
-								INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)recoredBaseInst, IARG_INST_PTR, IARG_END);
+								if(!KnobBBVerstion)
+									INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)recoredBaseInst, IARG_INST_PTR, IARG_END);
 							}
 							else if( memOperands < 3)
 							{

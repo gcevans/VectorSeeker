@@ -11,7 +11,8 @@ VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMem
 	// char buff[256];
 	// disassemblyToBuff(buff, (void *) ins.ip);
 	// fprintf(out, "%p\t%s\n", (void *) ins.ip, buff);
-	return;
+	if(!KnobBBVerstion)
+		return;
 
 	instructionCount++;
 		
@@ -56,7 +57,8 @@ VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one,
 	// char buff[256];
 	// disassemblyToBuff(buff, (void *) ins.ip);
 	// fprintf(out, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ins.ip, buff, addr1, addr2);
-	return;
+	if(!KnobBBVerstion)
+		return;
 
 
 	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ins.ip]);
