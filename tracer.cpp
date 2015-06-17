@@ -434,11 +434,12 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 	// char buff[256];
 	// disassemblyToBuff(buff, (void *) ip);
-	// fprintf(trace, "%p\t%s\n", (void *) ip, buff);
+	// fprintf(trace, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ip, buff, addr1, addr2);
 
 	rwAddressLog.push_back( make_pair((ADDRINT) addr1, t1) );
 	rwAddressLog.push_back( make_pair((ADDRINT) addr2, t2) );
-//	fprintf(trace, "two ops written for %p\n", ip);
+	// fprintf(trace, "two ops written for %p\n", ip);
+	// return;
 
 	instructionCount++;
 	
@@ -524,11 +525,11 @@ VOID blockTracer(VOID *ip, ADDRINT id)
 		// fprintf(trace, "Call UBBID %p\n", (void *) lastBB );
 		basicBlocks[lastBB].execute(rwAddressLog, shadowMemory, trace);
 		basicBlocks[lastBB].addSuccessors((ADDRINT) ip);
-		if(KnobDebugTrace)
-		{
-			fprintf(trace, "BBL %p executed\n", (void *) lastBB);
-			basicBlocks[lastBB].printBlock(trace);
-		}
+		// if(KnobDebugTrace)
+		// {
+		// 	fprintf(trace, "BBL %p executed\n", (void *) lastBB);
+		// 	basicBlocks[lastBB].printBlock(trace);
+		// }
 	}
 	lastBB = id;
 }

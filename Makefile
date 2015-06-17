@@ -68,7 +68,7 @@ tracerlib.o : tracerlib.c tracerlib.h
 	$(CC) -c -O0 -o tracerlib.o tracerlib.c
 	
 runtest : tracer.so mintest
-	$(PINPATH)/pin.sh -injection child -t tracer.so -o mintest.log -- ./mintest
+	setarch `uname -m` -R $(PINPATH)/pin.sh -injection child -t tracer.so -o mintest.log -- ./mintest
 
 rundeeploops : tracer.so deeploops
 	setarch `uname -m` -R $(PINPATH)/pin.sh -injection child -t tracer.so -o deeploops.log -- ./deeploops

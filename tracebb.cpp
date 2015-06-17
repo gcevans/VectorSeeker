@@ -33,7 +33,7 @@ VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMem
 		shadowMemory.writeReg(ins.registers_written[i], value);
 	}
 	
-	if(value > 0 && (!((ins.type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
+	if(value > 0 && (!((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[ins.ip].addToDepth(value);
 		current_instruction->execution_count += 1;
@@ -44,19 +44,22 @@ VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMem
 }
 
 VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one, pair<ADDRINT,UINT32>two, ShadowMemory &shadowMemory, FILE *out)
-//VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t2)
 {
 
-	// char buff[256];
-	// disassemblyToBuff(buff, (void *) ins.ip);
-	// fprintf(out, "%p\t%s\n", (void *) ins.ip, buff);
-	return;
 
 	VOID *ip = (VOID *) ins.ip;
 	VOID *addr1 = (VOID *) one.first;
 	UINT32 type1 = one.second;
 	VOID *addr2 = (VOID *) two.first;
 	UINT32 type2 = two.second;
+
+	// char buff[256];
+	// disassemblyToBuff(buff, (void *) ins.ip);
+	// fprintf(out, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ins.ip, buff, addr1, addr2);
+	return;
+
+
+	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ins.ip]);
 
 	long value = 0;
 	
@@ -93,7 +96,7 @@ VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one,
 	
 	long region1 = 0;
 	long region2 = 0;
-	if(type1 & WRITE_OPERATOR_TYPE)
+	if(type1 & (!((ins.type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		if(shadowMemory.memIsArray(addr1))
 			region1 = 1;
@@ -117,11 +120,11 @@ VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one,
 
 	value = max(max(value,region1),region2);
 
-	if(value > 0 && ((ins.type == MOVEONLY_INS_TYPE) && KnobSkipMove) )
+	if(value > 0 && !(((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[(ADDRINT)ip].addToDepth(value);
-		// current_instruction->execution_count += 1;
-		// current_instruction->loopid = loopStack;
+		current_instruction->execution_count += 1;
+		current_instruction->loopid = loopStack;
 	}
 
 	if(KnobDebugTrace)
