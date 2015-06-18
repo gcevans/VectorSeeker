@@ -564,7 +564,10 @@ VOID Trace(TRACE pintrace, VOID *v)
 	    		if(BBL_Original(bbl))
 	    		{
 	    			UBBID++;
-	    			logBasicBlock(bbl, UBBID);
+	    			if(KnobDebugTrace)
+	    			{
+		    			logBasicBlock(bbl, UBBID);
+	    			}
 		    		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)blockTracer, IARG_INST_PTR, IARG_ADDRINT, UBBID, IARG_END);
 		    		basicBlocks[UBBID].expected_num_ins = BBL_NumIns(bbl);
 		    		// insturment each instruction in the curent basic block
@@ -960,7 +963,10 @@ int main(int argc, char * argv[])
 
 	// Initialize VectorSeeker globals
 	trace = fopen(KnobOutputFile.Value().c_str(), "w");
-	bbl_log = fopen("bbl.log", "w");
+	if(KnobDebugTrace)
+	{
+		bbl_log = fopen("bbl.log", "w");
+	}
 	UBBID = 0;
 	tracinglevel = 0;
 	instructionCount = 0;
