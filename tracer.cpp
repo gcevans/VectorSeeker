@@ -194,12 +194,11 @@ VOID writeLog()
 	if(!KnobForFrontend)
 		fprintf(trace, "#start instruction log\n");
 	
-	unordered_map<ADDRINT,instructionLocationsData >::iterator ipit;
 	vector<instructionLocationsData *> profile_list;
 	map< string,map<int,vector<instructionLocationsData *> > >line_map;
 	vector<instructionLocationsData *> *current_line;
 
-	for(ipit = instructionLocations.begin(); ipit != instructionLocations.end(); ipit++)
+	for(auto ipit = instructionLocations.begin(); ipit != instructionLocations.end(); ++ipit)
 	{
 //		fprintf(trace, "Location %p\n", (VOID *) ipit->second.ip);
 		profile_list.push_back(&(ipit->second));
@@ -305,12 +304,11 @@ VOID writeOnOffLog()
 {
 	if(!KnobForFrontend)
 		fprintf(trace, "#start instruction log\n");
-	unordered_map<ADDRINT,instructionLocationsData >::iterator ipit;
 	vector<instructionLocationsData *> profile_list;
 	map< string,map<int,vector<instructionLocationsData *> > >line_map;
 	vector<instructionLocationsData *> *current_line;
 
-	for(ipit = instructionLocations.begin(); ipit != instructionLocations.end(); ipit++)
+	for(auto ipit = instructionLocations.begin(); ipit != instructionLocations.end(); ++ipit)
 	{
 		profile_list.push_back(&(ipit->second));
 		line_map[ipit->second.file_name][ipit->second.line_number].push_back(&(ipit->second));
@@ -687,8 +685,7 @@ VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
 
 void clearVectors()
 {
-	unordered_map<ADDRINT,instructionLocationsData >::iterator it;
-	for(it = instructionLocations.begin(); it != instructionLocations.end(); it++)
+	for(auto it = instructionLocations.begin(); it != instructionLocations.end(); ++it)
 	{
 		it->second.logged = false;
 		it->second.execution_count = 0;

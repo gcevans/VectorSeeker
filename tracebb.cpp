@@ -6,7 +6,7 @@
 
 extern unsigned instructionCount;
 
-VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMemory, FILE *out)
+VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowMemory, FILE *out)
 {
 	// char buff[256];
 	// disassemblyToBuff(buff, (void *) ins.ip);
@@ -14,14 +14,15 @@ VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMem
 	if(!KnobBBVerstion)
 		return;
 
-	instructionCount++;
+	++instructionCount;
 		
 	long value = 0;
 	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ins.ip]);
 	
-	for(unsigned int i = 0; i < ins.registers_read.size(); i++)
+//	for(unsigned int i = 0; i < ins.registers_read.size(); ++i)
+	for(auto reg : ins.registers_read)
 	{
-		value = max(shadowMemory.readReg(ins.registers_read[i]),value);
+		value = max(shadowMemory.readReg(reg),value);
 	}
 	
 	if(value > 0)
@@ -29,9 +30,10 @@ VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMem
 		value = value + 1;
 	}
 
-	for(unsigned int i = 0; i < ins.registers_written.size(); i++)
+//	for(unsigned int i = 0; i < ins.registers_written.size(); i++)
+	for(auto reg : ins.registers_written)
 	{
-		shadowMemory.writeReg(ins.registers_written[i], value);
+		shadowMemory.writeReg(reg, value);
 	}
 	
 	if(value > 0 && (!((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
@@ -40,11 +42,12 @@ VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMem
 		current_instruction->execution_count += 1;
 		current_instruction->loopid = loopStack;
 	}
+	
 	if(KnobDebugTrace)
 		instructionTracing((VOID *)ins.ip,NULL,value,"Base",out,shadowMemory);
 }
 
-VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one, pair<ADDRINT,UINT32>two, ShadowMemory &shadowMemory, FILE *out)
+VOID handleMemInstBB(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one, pair<ADDRINT,UINT32>two, ShadowMemory &shadowMemory, FILE *out)
 {
 
 
@@ -201,7 +204,7 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 
 		if(instructions[i].memOperands == 0)
 		{
-			handleBaseInst(instructions[i], shadowMemory, out);
+			handleBaseInstBB(instructions[i], shadowMemory, out);
 		}
 		else if(instructions[i].memOperands < 3)
 		{
@@ -212,7 +215,7 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 				break;
 			}
 
-			handleMemInst(instructions[i], addrs[memOpsCount], addrs[memOpsCount+1], shadowMemory, out);
+			handleMemInstBB(instructions[i], addrs[memOpsCount], addrs[memOpsCount+1], shadowMemory, out);
 			memOpsCount += 2;
 		}
 		else
