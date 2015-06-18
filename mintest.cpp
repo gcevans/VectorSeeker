@@ -4,17 +4,18 @@
 #include "tracerlib.h"
 #include <stdio.h>
 
-double *A;
-double *B;
-double *C;
-double *D;
-size_t *I;
-
 struct chunck
 {
 	 size_t start,end;
 	 double *data;
 };
+
+double *A;
+double *B;
+double *C;
+double *D;
+size_t *I;
+chunck *chuncks;
 
 void init()
 {
@@ -97,17 +98,9 @@ void caseloop()
 	}
 }
 
-int main()
+void execute()
 {
-	A = (double *) malloc(sizeof(double) * COUNT * 10);
-	B = (double *) malloc(sizeof(double) * COUNT * 10);
-	C = (double *) malloc(sizeof(double) * COUNT * 10);
-	I = (size_t *) malloc(sizeof(size_t)*COUNT * 10);
-	chunck *chuncks = (chunck *) malloc (sizeof(chunck)*2);
-	chuncks[0].data = (double *) malloc(sizeof(double) * COUNT * 10);
-	chuncks[1].data = (double *) malloc(sizeof(double) * COUNT * 10);
-
- for(size_t i = 0; i < COUNT*10; i++)
+	for(size_t i = 0; i < COUNT*10; i++)
 	{
 		chuncks[0].data[i] = 1;
 		chuncks[1].data[i] = 1;
@@ -133,6 +126,19 @@ int main()
 
     init();
     C[0] = reduction();
+}
+
+int main()
+{
+	A = (double *) malloc(sizeof(double) * COUNT * 10);
+	B = (double *) malloc(sizeof(double) * COUNT * 10);
+	C = (double *) malloc(sizeof(double) * COUNT * 10);
+	I = (size_t *) malloc(sizeof(size_t)*COUNT * 10);
+	chuncks = (chunck *) malloc (sizeof(chunck)*2);
+	chuncks[0].data = (double *) malloc(sizeof(double) * COUNT * 10);
+	chuncks[1].data = (double *) malloc(sizeof(double) * COUNT * 10);
+
+	execute();
     
 	free(A);
 	free(B);

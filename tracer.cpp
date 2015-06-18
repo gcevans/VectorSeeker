@@ -419,7 +419,7 @@ VOID recoredBaseInst(VOID *ip)
 		current_instruction->loopid = loopStack;
 	}
 	if(KnobDebugTrace)
-		instructionTracing(ip,NULL,value,"recoredBaseInst",trace,shadowMemory);
+		instructionTracing(ip,NULL,value,"Base",trace,shadowMemory);
 }
 
 const UINT32 NONE_OPERATOR_TYPE = 0;
@@ -515,10 +515,12 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 		current_instruction->loopid = loopStack;
 	}
 
-	if(!KnobDebugTrace)
-		return;
-		
-	instructionTracing(ip,addr2,value,"RecordMemReadWrite",trace, shadowMemory);
+	if(KnobDebugTrace)
+	{
+		instructionTracing(ip,addr2,value,"Mem",trace, shadowMemory);
+		fprintf(trace,"<%p,%u><%p,%u>", addr1, type1, addr2, type2);
+		// shadowMemory.printAllocationMap(trace);
+	}
 }
 
 VOID blockTracer(VOID *ip, ADDRINT id)
@@ -697,7 +699,7 @@ VOID clearState()
 	clearVectors();
 	shadowMemory.clear();
 	
-	lastBB = NULL; //this may be the wrong place
+	lastBB = 0; //this may be the wrong place
 	rwAddressLog.clear();
 }
 

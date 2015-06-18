@@ -248,4 +248,14 @@ bool ShadowMemory::memIsArray(VOID *addr)
 	return false;
 }
 
+void ShadowMemory::printAllocationMap(FILE *out)
+{
+	for(auto a : allocationMap)
+	{
+		fprintf(out, "[%p,%p]", (void*) a.first, (void *)(a.first + a.second));
+	}
+	fprintf(out, "\n");
+}
+
+
 

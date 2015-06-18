@@ -41,7 +41,7 @@ VOID handleBaseInst(const instructionLocationsData &ins, ShadowMemory &shadowMem
 		current_instruction->loopid = loopStack;
 	}
 	if(KnobDebugTrace)
-		instructionTracing((VOID *)ins.ip,NULL,value,"recoredBaseInst",out,shadowMemory);
+		instructionTracing((VOID *)ins.ip,NULL,value,"Base",out,shadowMemory);
 }
 
 VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one, pair<ADDRINT,UINT32>two, ShadowMemory &shadowMemory, FILE *out)
@@ -98,7 +98,7 @@ VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one,
 	
 	long region1 = 0;
 	long region2 = 0;
-	if(type1 & (!((ins.type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
+	if(type1 & WRITE_OPERATOR_TYPE)
 	{
 		if(shadowMemory.memIsArray(addr1))
 			region1 = 1;
@@ -130,7 +130,11 @@ VOID handleMemInst(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one,
 	}
 
 	if(KnobDebugTrace)
-		instructionTracing(ip,addr2,value,"RecordMemReadWrite",out, shadowMemory);
+	{
+		instructionTracing(ip,addr2,value,"Mem",out, shadowMemory);
+		fprintf(out,"<%p,%u><%p,%u>", addr1, type1, addr2, type2);
+		// shadowMemory.printAllocationMap(out);
+	}
 
 }
 
@@ -162,6 +166,16 @@ VOID BBData::printBlock(FILE *out)
 		fprintf(out, "%p\n",(void * ) (*it) );
 	}
 	fprintf(out, "################\n");
+}
+
+void printAddrs(const vector<pair<ADDRINT,UINT32> > &addrs, FILE *out)
+{
+//	fprintf(out, "Start Block Addresses\n");
+	for(auto p : addrs)
+	{
+		fprintf(out, "<%p,%d>", (void *) p.first, (int) p.second);
+	}
+	fprintf(out, "\n");
 }
 
 VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowMemory, FILE *out)
@@ -205,6 +219,10 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 		{
 			instructionTracing((VOID *) instructions[i].ip,NULL,0,"unhandledMemOp",out, shadowMemory);
 		}
+	}
+	if(KnobDebugTrace)
+	{
+		printAddrs(addrs, out);
 	}
 	addrs.clear();
 	// fprintf(out, "Done Executing Block Ending %p\n", (void *) instructions.back().ip);

@@ -49,6 +49,8 @@ public:
 	void arrayMemClear(ADDRINT start);
 	//Check if addr is allocated
 	bool memIsArray(VOID *addr);
+	//Print allocation map
+	void printAllocationMap(FILE *out);
 };
 
 #endif

@@ -258,7 +258,8 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 	PIN_UnlockClient();
 
 
-	fprintf(out, "%p:%d:%s - %s:%s\t\tOperands(%d)", ip,source_line, called_from, source_file.c_str(), decodeBuffer,numOperands);
+	// fprintf(out, "%p:%s,%d:%s\t\tOps(%d)", ip, source_file.c_str(), source_line, decodeBuffer,numOperands);
+	fprintf(out, "%p:%s\t\tOps(%d)", ip, decodeBuffer,numOperands);
 
 	for(int i = 0; i < numOperands; i++)
 	{
