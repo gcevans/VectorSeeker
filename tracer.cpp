@@ -174,9 +174,6 @@ KNOB<bool> KnobForFrontend(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<bool> KnobForVectorSummary(KNOB_MODE_WRITEONCE, "pintool",
 	"vector-summary", "0", "summerize vectors");
 	
-KNOB<bool> KnobForLoopScoping(KNOB_MODE_WRITEONCE, "pintool",
-	"loop-scope", "0", "scope to loops using on and off functions");
-
 KNOB<bool> KnobForShowNoFileInfo(KNOB_MODE_WRITEONCE, "pintool",
 	"show-all", "0", "show instrucions with no file info");
 
@@ -400,7 +397,7 @@ VOID recoredBaseInst(VOID *ip)
 		value = max(shadowMemory.readReg(current_instruction->registers_read[i]),value);
 	}
 	
-	if(value > 0)
+	if(value > 0 && (current_instruction->type != MOVEONLY_INS_TYPE))
 	{
 		value = value +1;
 	}
@@ -440,6 +437,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	rwAddressLog.push_back( make_pair((ADDRINT) addr1, t1) );
 	rwAddressLog.push_back( make_pair((ADDRINT) addr2, t2) );
 	// fprintf(trace, "two ops written for %p\n", ip);
+
 	if(KnobBBVerstion)
 		return;
 
@@ -470,7 +468,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 //	fprintf(trace, "After all reads value = %ld\n", value);
 		
-	if(value > 0)
+	if(value > 0 && (current_instruction->type != MOVEONLY_INS_TYPE))
 	{
 		value = value +1;
 	}
@@ -523,17 +521,16 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 VOID blockTracer(VOID *ip, ADDRINT id)
 {
-//	assert(basicBlocks.find(id) != basicBlocks.end());
 	if(tracinglevel && lastBB)
 	{
 		// fprintf(trace, "Call UBBID %p\n", (void *) lastBB );
 		basicBlocks[lastBB].execute(rwAddressLog, shadowMemory, trace);
 		basicBlocks[lastBB].addSuccessors((ADDRINT) ip);
-		// if(KnobDebugTrace)
-		// {
-		// 	fprintf(trace, "BBL %p executed\n", (void *) lastBB);
-		// 	basicBlocks[lastBB].printBlock(trace);
-		// }
+		if(KnobDebugTrace)
+		{
+			fprintf(trace, "BBL %p executed\n", (void *) lastBB);
+			basicBlocks[lastBB].printBlock(trace);
+		}
 	}
 	lastBB = id;
 }
@@ -719,7 +716,7 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 	}
 	else if(tracinglevel == 1)
 	{
-		blockTracer(NULL, 0);
+		blockTracer(NULL, 0); // trace final block
 		shadowMemory.clear();
 		if(!KnobVectorLineSummary)
 		{
@@ -739,26 +736,12 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 
 VOID traceFunctionEntry(CHAR * name, ADDRINT start, THREADID threadid)
 {
-	if(KnobForLoopScoping)
-	{
-		InTraceFunction++;
-	}
-	else
-	{
-		traceOn(name, start, threadid);
-	}
+	traceOn(name, start, threadid);
 }
 
 VOID traceFunctionExit(CHAR * name, ADDRINT start, THREADID threadid)
 {
-	if(KnobForLoopScoping && (InTraceFunction != 0))
-	{
-		InTraceFunction--;
-	}
-	else
-	{
-		traceOff(name,start,threadid);
-	}
+	traceOff(name,start,threadid);
 }
 
 // memory allocations other then from malloc
@@ -857,7 +840,7 @@ VOID Image(IMG img, VOID *v)
     if (RTN_Valid(traceRtn))
     {
         RTN_Open(traceRtn);
-        RTN_InsertCall(traceRtn, IPOINT_BEFORE, (AFUNPTR)traceOff,
+        RTN_InsertCall(traceRtn, IPOINT_AFTER, (AFUNPTR)traceOff,
                        IARG_ADDRINT, FREE,
                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
                        IARG_THREAD_ID,
@@ -906,7 +889,6 @@ VOID Image(IMG img, VOID *v)
     {
         RTN_Open(traceRtn);
 
-        // Instrument malloc() to print the input argument value and the return value.
         RTN_InsertCall(traceRtn, IPOINT_BEFORE, (AFUNPTR)traceFunctionEntry,
                        IARG_ADDRINT, MALLOC,
                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0,

@@ -25,7 +25,7 @@ VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowM
 		value = max(shadowMemory.readReg(reg),value);
 	}
 	
-	if(value > 0)
+	if(value > 0 && (ins.type != MOVEONLY_INS_TYPE))
 	{
 		value = value + 1;
 	}
@@ -89,7 +89,7 @@ VOID handleMemInstBB(const instructionLocationsData &ins, pair<ADDRINT,UINT32>on
 
 //	fprintf(trace, "After all reads value = %ld\n", value);
 		
-	if(value > 0)
+	if(value > 0 && (ins.type != MOVEONLY_INS_TYPE))
 	{
 		value = value +1;
 	}
@@ -135,7 +135,7 @@ VOID handleMemInstBB(const instructionLocationsData &ins, pair<ADDRINT,UINT32>on
 	if(KnobDebugTrace)
 	{
 		instructionTracing(ip,addr2,value,"Mem",out, shadowMemory);
-		fprintf(out,"<%p,%u><%p,%u>", addr1, type1, addr2, type2);
+		fprintf(out,"<%p,%u><%p,%u>\n", addr1, type1, addr2, type2);
 		// shadowMemory.printAllocationMap(out);
 	}
 
@@ -173,7 +173,7 @@ VOID BBData::printBlock(FILE *out)
 
 void printAddrs(const vector<pair<ADDRINT,UINT32> > &addrs, FILE *out)
 {
-//	fprintf(out, "Start Block Addresses\n");
+	fprintf(out, "Start Block Addresses\n");
 	for(auto p : addrs)
 	{
 		fprintf(out, "<%p,%d>", (void *) p.first, (int) p.second);
