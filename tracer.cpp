@@ -183,6 +183,10 @@ KNOB<bool> KobForPrintBasicBlocks(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<bool> KnobBBVerstion(KNOB_MODE_WRITEONCE, "pintool",
 	"bb", "0", "Use PIN basic block mode");
 
+KNOB<bool> KnobBBDotLog(KNOB_MODE_WRITEONCE, "pintool",
+	"bb-dot", "0", "Log Pin Basic Blocks in dot format");
+
+
 VOID writeLog()
 {
 	char decodeBuffer[1024];
@@ -349,6 +353,15 @@ VOID writeOnOffLog()
 		fprintf(trace, "#end instruction log\n");
 }
 
+void WriteBBDotLog(FILE *out)
+{
+	for(auto it = basicBlocks.begin(); it != basicBlocks.end(); it++)
+	{
+		(*it).second.printBlock(out);
+	}
+
+}
+
 
 // This function is called when the application exits
 VOID Fini(INT32 code, VOID *v)
@@ -374,6 +387,10 @@ VOID Fini(INT32 code, VOID *v)
 		{
 			(*it).second.printBlock(trace);
 		}
+	}
+	if(KnobBBDotLog)
+	{
+		WriteBBDotLog(bbl_log);
 	}
 	fclose(trace);
 }
@@ -948,7 +965,7 @@ int main(int argc, char * argv[])
 
 	// Initialize VectorSeeker globals
 	trace = fopen(KnobOutputFile.Value().c_str(), "w");
-	if(KnobDebugTrace)
+	if(KnobDebugTrace || KnobBBDotLog)
 	{
 		bbl_log = fopen("bbl.log", "w");
 	}
