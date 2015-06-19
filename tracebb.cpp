@@ -11,8 +11,6 @@ VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowM
 	// char buff[256];
 	// disassemblyToBuff(buff, (void *) ins.ip);
 	// fprintf(out, "%p\t%s\n", (void *) ins.ip, buff);
-	if(!KnobBBVerstion)
-		return;
 
 	++instructionCount;
 		
@@ -60,9 +58,6 @@ VOID handleMemInstBB(const instructionLocationsData &ins, pair<ADDRINT,UINT32>on
 	// char buff[256];
 	// disassemblyToBuff(buff, (void *) ins.ip);
 	// fprintf(out, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ins.ip, buff, addr1, addr2);
-	if(!KnobBBVerstion)
-		return;
-
 
 	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ins.ip]);
 
@@ -143,6 +138,7 @@ VOID handleMemInstBB(const instructionLocationsData &ins, pair<ADDRINT,UINT32>on
 
 VOID BBData::pushInstruction(instructionLocationsData ins)
 {
+	assert(ins.type != IGNORED_INS_TYPE);
 	instructions.push_back(ins);
 }
 
@@ -188,7 +184,11 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 
 	size_t memOpsCount = 0;
 
-	// fprintf(out, "Executing Block %p with %d instructions expected %d\n", (void *) instructions.front().ip, (int) instructions.size(), expected_num_ins);
+	if(KnobDebugTrace)
+	{
+		fprintf(out, "Executing Block %p with %d instructions expected %d\n", (void *) instructions.front().ip, (int) instructions.size(), expected_num_ins);
+	}
+
 	for(size_t i = 0; i < instructions.size(); i++)
 	{
 		// instructionCount++;
@@ -210,8 +210,15 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 		{
 			if( (memOpsCount+2) > addrs.size())
 			{
-				// fprintf(out, "incomplete block data\n");
+				fprintf(out, "incomplete block data\n");
 				// this->printBlock(out);
+				if(KnobDebugTrace)
+				{
+					char buff[256];
+					disassemblyToBuff(buff, (void *) instructions[i].ip);
+					fprintf(out, "Lacking Addrs %p\t%s\n", (void *) instructions[i].ip, buff);
+
+				}
 				break;
 			}
 
@@ -225,10 +232,11 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 	}
 	if(KnobDebugTrace)
 	{
+		fprintf(out, "Done Executing Block Ending %p\n", (void *) instructions.back().ip);
+		this->printBlock(out);
 		printAddrs(addrs, out);
 	}
 	addrs.clear();
-	// fprintf(out, "Done Executing Block Ending %p\n", (void *) instructions.back().ip);
 }
 
 VOID BBData::addSuccessors(ADDRINT s)

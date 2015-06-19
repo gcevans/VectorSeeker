@@ -157,7 +157,7 @@ KNOB<int> KnobTraceLimit(KNOB_MODE_WRITEONCE, "pintool",
 	"trace-limit", "0", "Maximum number of trace regions 0 is unlimited");
 	
 KNOB<bool> KnobSkipMove(KNOB_MODE_WRITEONCE, "pintool",
-	"m", "1", "Vectorize move instructions");
+	"m", "1", "Try to vectorize move instructions");
 
 KNOB<bool> KnobDebugTrace(KNOB_MODE_WRITEONCE, "pintool",
 	"D", "0", "Enable full debug trace");
@@ -434,12 +434,14 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	// disassemblyToBuff(buff, (void *) ip);
 	// fprintf(trace, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ip, buff, addr1, addr2);
 
-	rwAddressLog.push_back( make_pair((ADDRINT) addr1, t1) );
-	rwAddressLog.push_back( make_pair((ADDRINT) addr2, t2) );
-	// fprintf(trace, "two ops written for %p\n", ip);
 
 	if(KnobBBVerstion)
+	{
+		rwAddressLog.push_back( make_pair((ADDRINT) addr1, t1) );
+		rwAddressLog.push_back( make_pair((ADDRINT) addr2, t2) );
+		// fprintf(trace, "two ops written for %p\n", ip);
 		return;
+	}
 
 	instructionCount++;
 	
@@ -521,6 +523,9 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 VOID blockTracer(VOID *ip, ADDRINT id)
 {
+	if(!KnobBBVerstion)
+		return;
+
 	if(tracinglevel && lastBB)
 	{
 		// fprintf(trace, "Call UBBID %p\n", (void *) lastBB );
@@ -529,7 +534,7 @@ VOID blockTracer(VOID *ip, ADDRINT id)
 		if(KnobDebugTrace)
 		{
 			fprintf(trace, "BBL %p executed\n", (void *) lastBB);
-			basicBlocks[lastBB].printBlock(trace);
+		//	basicBlocks[lastBB].printBlock(trace);
 		}
 	}
 	lastBB = id;
@@ -563,7 +568,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 	    			{
 		    			logBasicBlock(bbl, UBBID);
 	    			}
-		    		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)blockTracer, IARG_INST_PTR, IARG_ADDRINT, UBBID, IARG_END);
+		    		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)blockTracer, IARG_INST_PTR, IARG_ADDRINT, UBBID, IARG_CALL_ORDER, CALL_ORDER_FIRST-5, IARG_END);
 		    		basicBlocks[UBBID].expected_num_ins = BBL_NumIns(bbl);
 		    		// insturment each instruction in the curent basic block
 			    	for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins) )
@@ -592,7 +597,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 							if(memOperands == 0)
 							{
 								if(!KnobBBVerstion)
-									INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)recoredBaseInst, IARG_INST_PTR, IARG_END);
+									INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)recoredBaseInst, IARG_INST_PTR, IARG_CALL_ORDER, CALL_ORDER_FIRST, IARG_END);
 							}
 							else if( memOperands < 3)
 							{
@@ -623,6 +628,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 									IARG_UINT32, type1,
 									IARG_MEMORYOP_EA, addr2,
 									IARG_UINT32, type2,
+									IARG_CALL_ORDER, CALL_ORDER_FIRST,
 									IARG_END);
 							}
 							else
