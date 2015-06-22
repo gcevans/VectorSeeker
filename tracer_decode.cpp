@@ -229,7 +229,6 @@ instructionType decodeInstructionData(ADDRINT ip, unordered_map<ADDRINT,instruct
 		}
 	}
 	PIN_LockClient();
-	PIN_GetSourceLocation(ip, &(instructionLocations[ip].col_number), &(instructionLocations[ip].line_number), &(instructionLocations[ip].file_name));
 	PIN_GetSourceLocation(ip, &(debugData[ip].col_number), &(debugData[ip].line_number), &(debugData[ip].file_name));
 	PIN_UnlockClient();
 	return insType;

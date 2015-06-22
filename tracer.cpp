@@ -193,7 +193,7 @@ void buildOutputMaps(vector<instructionLocationsData *> &pmap, map< string,map<i
 	for(auto ipit = instructionLocations.begin(); ipit != instructionLocations.end(); ++ipit)
 	{
 		pmap.push_back(&(ipit->second));
-		lmap[ipit->second.file_name][ipit->second.line_number].push_back(&(ipit->second));
+		lmap[debugData[ipit->second.ip].file_name][debugData[ipit->second.ip].line_number].push_back(&(ipit->second));
 	}
 	
 	sort(pmap.begin(),pmap.end(),instructionLocationsDataPointerSort);
@@ -241,7 +241,7 @@ VOID writeLog()
 				
 			fprintf(trace,"%s,%d<%s>:%ld\n", file_name.c_str(),line_number,loopstackstring.str().c_str(),ins->execution_count);
 
-			current_line = &(line_map[ins->file_name][line_number]);
+			current_line = &(line_map[debugData[ins->ip].file_name][line_number]);
 			sort(current_line->begin(),current_line->end(),instructionLocationsDataPointerAddrSort);
 			for(unsigned int j = 0; j < current_line->size(); j++)
 			{
