@@ -35,7 +35,6 @@ VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowM
 	if(value > 0 && (!((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[ins.ip].addToDepth(value);
-		current_instruction->execution_count += 1;
 		current_instruction->loopid = loopStack;
 	}
 	
@@ -119,7 +118,6 @@ VOID handleMemInstBB(const instructionLocationsData &ins, pair<ADDRINT,UINT32>on
 	if(value > 0 && !(((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[(ADDRINT)ip].addToDepth(value);
-		current_instruction->execution_count += 1;
 		current_instruction->loopid = loopStack;
 	}
 

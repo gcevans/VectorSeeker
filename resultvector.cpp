@@ -4,8 +4,13 @@
 void ResultVector::addToDepth(long depth)
 {
 	vectors[depth] += 1;
+	execution_count += 1;
 }
 
+long ResultVector::getExecutionCount()
+{
+	return execution_count;
+}
 
 long ResultVector::readDepthCount(long depth)
 {
@@ -56,6 +61,7 @@ bool ResultVector::vectorsGreater(int minVector)
 void ResultVector::clear()
 {
 	vectors.clear();
+	execution_count = 0;
 }
 
 

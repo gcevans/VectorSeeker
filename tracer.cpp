@@ -119,9 +119,9 @@ bool sortBySecond(pair<long,long> i, pair<long,long> j)
 
 bool instructionLocationsDataPointerSort(instructionLocationsData *a, instructionLocationsData *b)
 {
-	if(a->execution_count > b->execution_count)
+	if(instructionResults[a->ip].getExecutionCount() > instructionResults[b->ip].getExecutionCount())
 		return true;
-	else if(a->execution_count < b->execution_count)
+	else if(instructionResults[a->ip].getExecutionCount() < instructionResults[b->ip].getExecutionCount())
 		return false;
 	else
 	{
@@ -227,7 +227,7 @@ VOID writeLog()
 			filesFound = true;
 		}
 
-		if(!(ins->logged) && (file_name != "NO FILE INFORMATION" || KnobForShowNoFileInfo ) && (ins->execution_count > 0))
+		if(!(ins->logged) && (file_name != "NO FILE INFORMATION" || KnobForShowNoFileInfo ) && (instructionResults[ins->ip].getExecutionCount() > 0))
 		{
 			std::ostringstream loopstackstring;
 			for(std::list<long long>::reverse_iterator it = ins->loopid.rbegin(); it != ins->loopid.rend();)
@@ -238,13 +238,13 @@ VOID writeLog()
 					loopstackstring << ',';
 			}
 				
-			fprintf(trace,"%s,%d<%s>:%ld\n", file_name.c_str(),line_number,loopstackstring.str().c_str(),ins->execution_count);
+			fprintf(trace,"%s,%d<%s>:%ld\n", file_name.c_str(),line_number,loopstackstring.str().c_str(),instructionResults[ins->ip].getExecutionCount());
 
 			current_line = &(line_map[debugData[ins->ip].file_name][line_number]);
 			sort(current_line->begin(),current_line->end(),instructionLocationsDataPointerAddrSort);
 			for(unsigned int j = 0; j < current_line->size(); j++)
 			{
-				if((*current_line)[j]->execution_count > 0)
+				if(instructionResults[(*current_line)[j]->ip].getExecutionCount() > 0)
 				{
 					(*current_line)[j]->logged = true;
 					VOID *ip = (VOID *)(*current_line)[j]->ip;
@@ -320,7 +320,7 @@ VOID writeOnOffLog()
 		string file_name = debugData[ins->ip].file_name;
 		int line_number = debugData[ins->ip].line_number;
 
-		if(!(ins->logged) && (file_name != "") && (ins->execution_count > 0))
+		if(!(ins->logged) && (file_name != "") && (instructionResults[ins->ip].getExecutionCount() > 0))
 		{
 			bool isVectorizable = false;
 			bool isNotVectorizable = false;
@@ -329,7 +329,7 @@ VOID writeOnOffLog()
 			for(unsigned int j = 0; j < current_line->size(); j++)
 			{
 				(*current_line)[j]->logged = true;
-				if((*current_line)[j]->execution_count > 0)
+				if(instructionResults[(*current_line)[j]->ip].getExecutionCount() > 0)
 				{
 					bool noVectorGreaterThenOne = true;
 					if(instructionResults[(*current_line)[j]->ip].vectorsGreater(KnobMinVectorCount.Value()))
@@ -343,11 +343,11 @@ VOID writeOnOffLog()
 			}
 
 			if(isVectorizable && !isNotVectorizable)
-				fprintf(trace,"V:%s,%d:%ld\n", file_name.c_str(),line_number,ins->execution_count);
+				fprintf(trace,"V:%s,%d:%ld\n", file_name.c_str(),line_number,instructionResults[ins->ip].getExecutionCount() );
 			else if(isVectorizable && isNotVectorizable)
-				fprintf(trace,"P:%s,%d:%ld\n", file_name.c_str(),line_number,ins->execution_count);
+				fprintf(trace,"P:%s,%d:%ld\n", file_name.c_str(),line_number,instructionResults[ins->ip].getExecutionCount() );
 			else
-				fprintf(trace,"N:%s,%d:%ld\n", file_name.c_str(),line_number,ins->execution_count);
+				fprintf(trace,"N:%s,%d:%ld\n", file_name.c_str(),line_number,instructionResults[ins->ip].getExecutionCount() );
 		}
 	}
 	if(!KnobForFrontend)
@@ -426,7 +426,6 @@ VOID recoredBaseInst(VOID *ip)
 	if(value > 0 && (!((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[(ADDRINT)ip].addToDepth(value);
-		current_instruction->execution_count += 1;
 		current_instruction->loopid = loopStack;
 	}
 	if(KnobDebugTrace)
@@ -523,7 +522,6 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	if(value > 0 && !(((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[(ADDRINT)ip].addToDepth(value);
-		current_instruction->execution_count += 1;
 		current_instruction->loopid = loopStack;
 	}
 
@@ -706,7 +704,6 @@ void clearVectors()
 	for(auto it = instructionLocations.begin(); it != instructionLocations.end(); ++it)
 	{
 		it->second.logged = false;
-		it->second.execution_count = 0;
 	}
 	instructionResults.clear();
 }
