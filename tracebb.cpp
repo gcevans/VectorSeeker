@@ -13,9 +13,6 @@ VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowM
 	++instructionCount;
 		
 	long value = 0;
-	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ins.ip]);
-	
-//	for(unsigned int i = 0; i < ins.registers_read.size(); ++i)
 	for(auto reg : ins.registers_read)
 	{
 		value = max(shadowMemory.readReg(reg),value);
@@ -32,10 +29,9 @@ VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowM
 		shadowMemory.writeReg(reg, value);
 	}
 	
-	if(value > 0 && (!((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
+	if(value > 0 && (!((ins.type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[ins.ip].addToDepth(value);
-		current_instruction->loopid = loopStack;
 	}
 	
 	if(KnobDebugTrace)
@@ -54,7 +50,6 @@ VOID handleMemInstBB(const instructionLocationsData &ins, pair<ADDRINT,UINT32>on
 
 	// fprintf(out, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ins.ip, debugData[ins.ip].instruction.c_str(), addr1, addr2);
 
-	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ins.ip]);
 
 	long value = 0;
 	
@@ -115,10 +110,9 @@ VOID handleMemInstBB(const instructionLocationsData &ins, pair<ADDRINT,UINT32>on
 
 	value = max(max(value,region1),region2);
 
-	if(value > 0 && !(((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
+	if(value > 0 && !(((ins.type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[(ADDRINT)ip].addToDepth(value);
-		current_instruction->loopid = loopStack;
 	}
 
 	if(KnobDebugTrace)

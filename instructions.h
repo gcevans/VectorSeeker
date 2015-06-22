@@ -14,10 +14,9 @@ enum instructionType { IGNORED_INS_TYPE, NORMAL_INS_TYPE, MOVEONLY_INS_TYPE, X87
 
 struct instructionLocationsData
 {
-	instructionLocationsData(){ip=0;execution_count=0;logged = FALSE;};
+	instructionLocationsData(){ip=0;logged = FALSE;};
 	vector<xed_reg_enum_t> registers_read;
 	vector<xed_reg_enum_t> registers_written;
-	long execution_count;
 	list<long long> loopid;
 	ADDRINT ip;
 	bool logged;

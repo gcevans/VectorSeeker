@@ -12,7 +12,7 @@ using std::pair;
 class ResultVector
 {
 private:
-	unordered_map<long,long long> vectors;	// most used how to speed up?
+	unordered_map<long,long> vectors;	// most used how to speed up?
 										// crashes if made a map why?
 	long execution_count;
 
