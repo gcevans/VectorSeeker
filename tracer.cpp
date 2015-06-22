@@ -311,46 +311,49 @@ VOID writeLog()
 
 VOID writeOnOffLog()
 {
-	// vector<instructionLocationsData *> profile_list;
-	// map< string,map<int,vector<instructionLocationsData *> > >line_map;
-	// vector<instructionLocationsData *> *current_line;
+	vector<instructionLocationsData *> profile_list;
+	map< string,map<int,vector<instructionLocationsData *> > >line_map;
+	vector<instructionLocationsData *> *current_line;
 
-	// buildOutputMaps(profile_list,line_map);
+	buildOutputMaps(profile_list,line_map);
 
-	// for(unsigned int i = 0; i < profile_list.size(); i++)
-	// {	
-	// 	if(!(profile_list[i]->logged) && (profile_list[i]->file_name != "") && (profile_list[i]->execution_count > 0))
-	// 	{
-	// 		bool isVectorizable = false;
-	// 		bool isNotVectorizable = false;
-	// 		current_line = &(line_map[profile_list[i]->file_name][profile_list[i]->line_number]);
-	// 		sort(current_line->begin(),current_line->end(),instructionLocationsDataPointerAddrSort);
-	// 		for(unsigned int j = 0; j < current_line->size(); j++)
-	// 		{
-	// 			(*current_line)[j]->logged = true;
-	// 			if((*current_line)[j]->execution_count > 0)
-	// 			{
-	// 				bool noVectorGreaterThenOne = true;
-	// 				if(instructionResults[(*current_line)[j]->ip].vectorsGreater(KnobMinVectorCount.Value()))
-	// 				{
-	// 					isVectorizable = true;
-	// 					noVectorGreaterThenOne = false;
-	// 				}
-	// 				if(noVectorGreaterThenOne)
-	// 					isNotVectorizable = true;
-	// 			}
-	// 		}
+	for(auto ins : profile_list)
+	{	
+		string file_name = debugData[ins->ip].file_name;
+		int line_number = debugData[ins->ip].line_number;
 
-	// 		if(isVectorizable && !isNotVectorizable)
-	// 			fprintf(trace,"V:%s,%d:%ld\n", profile_list[i]->file_name.c_str(),profile_list[i]->line_number,profile_list[i]->execution_count);
-	// 		else if(isVectorizable && isNotVectorizable)
-	// 			fprintf(trace,"P:%s,%d:%ld\n", profile_list[i]->file_name.c_str(),profile_list[i]->line_number,profile_list[i]->execution_count);
-	// 		else
-	// 			fprintf(trace,"N:%s,%d:%ld\n", profile_list[i]->file_name.c_str(),profile_list[i]->line_number,profile_list[i]->execution_count);
-	// 	}
-	// }
-	// if(!KnobForFrontend)
-	// 	fprintf(trace, "#end instruction log\n");
+		if(!(ins->logged) && (file_name != "") && (ins->execution_count > 0))
+		{
+			bool isVectorizable = false;
+			bool isNotVectorizable = false;
+			current_line = &(line_map[debugData[ins->ip].file_name][line_number]);
+			sort(current_line->begin(),current_line->end(),instructionLocationsDataPointerAddrSort);
+			for(unsigned int j = 0; j < current_line->size(); j++)
+			{
+				(*current_line)[j]->logged = true;
+				if((*current_line)[j]->execution_count > 0)
+				{
+					bool noVectorGreaterThenOne = true;
+					if(instructionResults[(*current_line)[j]->ip].vectorsGreater(KnobMinVectorCount.Value()))
+					{
+						isVectorizable = true;
+						noVectorGreaterThenOne = false;
+					}
+					if(noVectorGreaterThenOne)
+						isNotVectorizable = true;
+				}
+			}
+
+			if(isVectorizable && !isNotVectorizable)
+				fprintf(trace,"V:%s,%d:%ld\n", file_name.c_str(),line_number,ins->execution_count);
+			else if(isVectorizable && isNotVectorizable)
+				fprintf(trace,"P:%s,%d:%ld\n", file_name.c_str(),line_number,ins->execution_count);
+			else
+				fprintf(trace,"N:%s,%d:%ld\n", file_name.c_str(),line_number,ins->execution_count);
+		}
+	}
+	if(!KnobForFrontend)
+		fprintf(trace, "#end instruction log\n");
 }
 
 void WriteBBDotLog(FILE *out)
