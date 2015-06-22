@@ -328,7 +328,7 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 	fprintf(out, "value=%ld\n",value);
 }
 
-
+// Do not use if debugData is available. 
 VOID disassemblyToBuffInternal(char * decodeBuffer, VOID *ip, const xed_decoded_inst_t *ins)
 {
 	xed_print_info_t pi;
@@ -351,17 +351,6 @@ VOID disassemblyToBuffInternal(char * decodeBuffer, VOID *ip, const xed_decoded_
                                pi.blen);
         pi.blen = xed_strncat(pi.buf," syntax.",pi.blen);
     }
-}
-
-VOID disassemblyToBuff(char * decodeBuffer, VOID *ip)
-{
-	xed_state_t dstate;
-	xed_state_zero(&dstate);
-	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
-	xed_decoded_inst_t ins;
-	xed_decoded_inst_zero_set_mode(&ins, &dstate);
-	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
-	disassemblyToBuffInternal(decodeBuffer, ip, &ins);
 }
 
 const char *getInstCategoryString(VOID *ip)
