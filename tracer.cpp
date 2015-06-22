@@ -72,6 +72,7 @@ int InTraceFunction;
 ShadowMemory shadowMemory;
 
 unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
+unordered_map<ADDRINT, instructionDebugData> debugData;
 unordered_map<ADDRINT, ResultVector > instructionResults;
 unsigned vectorInstructionCountSavings;
 int traceRegionCount;
@@ -124,9 +125,9 @@ bool instructionLocationsDataPointerSort(instructionLocationsData *a, instructio
 		return false;
 	else
 	{
-		int files_differ = a->file_name.compare(b->file_name);
+		int files_differ = debugData[a->ip].file_name.compare(debugData[b->ip].file_name);
 		if(files_differ == 0)
-			return(a->line_number < b->line_number);
+			return(debugData[a->ip].line_number < debugData[b->ip].line_number);
 
 		return(files_differ < 0);
 	}
@@ -187,33 +188,39 @@ KNOB<bool> KnobBBDotLog(KNOB_MODE_WRITEONCE, "pintool",
 	"bb-dot", "0", "Log Pin Basic Blocks in dot format");
 
 
+void buildOutputMaps(vector<instructionLocationsData *> &pmap, map< string,map<int,vector<instructionLocationsData *>>> &lmap)
+{
+	for(auto ipit = instructionLocations.begin(); ipit != instructionLocations.end(); ++ipit)
+	{
+		pmap.push_back(&(ipit->second));
+		lmap[ipit->second.file_name][ipit->second.line_number].push_back(&(ipit->second));
+	}
+	
+	sort(pmap.begin(),pmap.end(),instructionLocationsDataPointerSort);
+}
+
+
 VOID writeLog()
 {
 	char decodeBuffer[1024];
 	bool linesFound = false;
-	bool filesFound = false;
+	bool filesFound = false;	
+	vector<instructionLocationsData *> profile_list; // sorted instructions
+	map< string,map<int,vector<instructionLocationsData *>>>line_map; // map of lines to instuctions
+	vector<instructionLocationsData *> *current_line; // instructions in the current line
+
 	if(!KnobForFrontend)
 		fprintf(trace, "#start instruction log\n");
-	
-	vector<instructionLocationsData *> profile_list;
-	map< string,map<int,vector<instructionLocationsData *> > >line_map;
-	vector<instructionLocationsData *> *current_line;
 
-	for(auto ipit = instructionLocations.begin(); ipit != instructionLocations.end(); ++ipit)
+	buildOutputMaps(profile_list,line_map);
+
+	for(auto ins : profile_list)
 	{
-//		fprintf(trace, "Location %p\n", (VOID *) ipit->second.ip);
-		profile_list.push_back(&(ipit->second));
-		line_map[ipit->second.file_name][ipit->second.line_number].push_back(&(ipit->second));
-	}
-	
-	sort(profile_list.begin(),profile_list.end(),instructionLocationsDataPointerSort);
-	
-	assert(profile_list.size() > 0);
-
-	for(unsigned int i = 0; i < profile_list.size(); i++)
-	{	
 		linesFound = true;
-		string file_name = profile_list[i]->file_name;
+
+		string file_name = debugData[ins->ip].file_name;
+		int line_number = debugData[ins->ip].line_number;
+
 		if(file_name == "")
 			file_name = "NO FILE INFORMATION";
 		else
@@ -221,19 +228,20 @@ VOID writeLog()
 			filesFound = true;
 		}
 
-		if(!(profile_list[i]->logged) && (file_name != "NO FILE INFORMATION" || KnobForShowNoFileInfo ) && (profile_list[i]->execution_count > 0))
+		if(!(ins->logged) && (file_name != "NO FILE INFORMATION" || KnobForShowNoFileInfo ) && (ins->execution_count > 0))
 		{
 			std::ostringstream loopstackstring;
-			for(std::list<long long>::reverse_iterator it = profile_list[i]->loopid.rbegin(); it != profile_list[i]->loopid.rend();)
+			for(std::list<long long>::reverse_iterator it = ins->loopid.rbegin(); it != ins->loopid.rend();)
 			{
 				loopstackstring << *it;
 				it++;
-				if(it != profile_list[i]->loopid.rend())
+				if(it != ins->loopid.rend())
 					loopstackstring << ',';
 			}
 				
-			fprintf(trace,"%s,%d<%s>:%ld\n", file_name.c_str(),profile_list[i]->line_number,loopstackstring.str().c_str(),profile_list[i]->execution_count);
-			current_line = &(line_map[profile_list[i]->file_name][profile_list[i]->line_number]);
+			fprintf(trace,"%s,%d<%s>:%ld\n", file_name.c_str(),line_number,loopstackstring.str().c_str(),ins->execution_count);
+
+			current_line = &(line_map[ins->file_name][line_number]);
 			sort(current_line->begin(),current_line->end(),instructionLocationsDataPointerAddrSort);
 			for(unsigned int j = 0; j < current_line->size(); j++)
 			{
@@ -303,54 +311,46 @@ VOID writeLog()
 
 VOID writeOnOffLog()
 {
-	if(!KnobForFrontend)
-		fprintf(trace, "#start instruction log\n");
-	vector<instructionLocationsData *> profile_list;
-	map< string,map<int,vector<instructionLocationsData *> > >line_map;
-	vector<instructionLocationsData *> *current_line;
+	// vector<instructionLocationsData *> profile_list;
+	// map< string,map<int,vector<instructionLocationsData *> > >line_map;
+	// vector<instructionLocationsData *> *current_line;
 
-	for(auto ipit = instructionLocations.begin(); ipit != instructionLocations.end(); ++ipit)
-	{
-		profile_list.push_back(&(ipit->second));
-		line_map[ipit->second.file_name][ipit->second.line_number].push_back(&(ipit->second));
-	}
-	
-	sort(profile_list.begin(),profile_list.end(),instructionLocationsDataPointerSort);
-	
-	for(unsigned int i = 0; i < profile_list.size(); i++)
-	{	
-		if(!(profile_list[i]->logged) && (profile_list[i]->file_name != "") && (profile_list[i]->execution_count > 0))
-		{
-			bool isVectorizable = false;
-			bool isNotVectorizable = false;
-			current_line = &(line_map[profile_list[i]->file_name][profile_list[i]->line_number]);
-			sort(current_line->begin(),current_line->end(),instructionLocationsDataPointerAddrSort);
-			for(unsigned int j = 0; j < current_line->size(); j++)
-			{
-				(*current_line)[j]->logged = true;
-				if((*current_line)[j]->execution_count > 0)
-				{
-					bool noVectorGreaterThenOne = true;
-					if(instructionResults[(*current_line)[j]->ip].vectorsGreater(KnobMinVectorCount.Value()))
-					{
-						isVectorizable = true;
-						noVectorGreaterThenOne = false;
-					}
-					if(noVectorGreaterThenOne)
-						isNotVectorizable = true;
-				}
-			}
-			//
-			if(isVectorizable && !isNotVectorizable)
-				fprintf(trace,"V:%s,%d:%ld\n", profile_list[i]->file_name.c_str(),profile_list[i]->line_number,profile_list[i]->execution_count);
-			else if(isVectorizable && isNotVectorizable)
-				fprintf(trace,"P:%s,%d:%ld\n", profile_list[i]->file_name.c_str(),profile_list[i]->line_number,profile_list[i]->execution_count);
-			else
-				fprintf(trace,"N:%s,%d:%ld\n", profile_list[i]->file_name.c_str(),profile_list[i]->line_number,profile_list[i]->execution_count);
-		}
-	}
-	if(!KnobForFrontend)
-		fprintf(trace, "#end instruction log\n");
+	// buildOutputMaps(profile_list,line_map);
+
+	// for(unsigned int i = 0; i < profile_list.size(); i++)
+	// {	
+	// 	if(!(profile_list[i]->logged) && (profile_list[i]->file_name != "") && (profile_list[i]->execution_count > 0))
+	// 	{
+	// 		bool isVectorizable = false;
+	// 		bool isNotVectorizable = false;
+	// 		current_line = &(line_map[profile_list[i]->file_name][profile_list[i]->line_number]);
+	// 		sort(current_line->begin(),current_line->end(),instructionLocationsDataPointerAddrSort);
+	// 		for(unsigned int j = 0; j < current_line->size(); j++)
+	// 		{
+	// 			(*current_line)[j]->logged = true;
+	// 			if((*current_line)[j]->execution_count > 0)
+	// 			{
+	// 				bool noVectorGreaterThenOne = true;
+	// 				if(instructionResults[(*current_line)[j]->ip].vectorsGreater(KnobMinVectorCount.Value()))
+	// 				{
+	// 					isVectorizable = true;
+	// 					noVectorGreaterThenOne = false;
+	// 				}
+	// 				if(noVectorGreaterThenOne)
+	// 					isNotVectorizable = true;
+	// 			}
+	// 		}
+
+	// 		if(isVectorizable && !isNotVectorizable)
+	// 			fprintf(trace,"V:%s,%d:%ld\n", profile_list[i]->file_name.c_str(),profile_list[i]->line_number,profile_list[i]->execution_count);
+	// 		else if(isVectorizable && isNotVectorizable)
+	// 			fprintf(trace,"P:%s,%d:%ld\n", profile_list[i]->file_name.c_str(),profile_list[i]->line_number,profile_list[i]->execution_count);
+	// 		else
+	// 			fprintf(trace,"N:%s,%d:%ld\n", profile_list[i]->file_name.c_str(),profile_list[i]->line_number,profile_list[i]->execution_count);
+	// 	}
+	// }
+	// if(!KnobForFrontend)
+	// 	fprintf(trace, "#end instruction log\n");
 }
 
 void WriteBBDotLog(FILE *out)
