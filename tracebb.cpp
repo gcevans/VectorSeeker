@@ -8,9 +8,7 @@ extern unsigned instructionCount;
 
 VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowMemory, FILE *out)
 {
-	// char buff[256];
-	// disassemblyToBuff(buff, (void *) ins.ip);
-	// fprintf(out, "%p\t%s\n", (void *) ins.ip, buff);
+	// fprintf(out, "%p\t%s\n", (void *) ins.ip, debugData[ins.ip].instruction.c_str());
 
 	++instructionCount;
 		
@@ -55,9 +53,7 @@ VOID handleMemInstBB(const instructionLocationsData &ins, pair<ADDRINT,UINT32>on
 	VOID *addr2 = (VOID *) two.first;
 	UINT32 type2 = two.second;
 
-	// char buff[256];
-	// disassemblyToBuff(buff, (void *) ins.ip);
-	// fprintf(out, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ins.ip, buff, addr1, addr2);
+	// fprintf(out, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ins.ip, debugData[ins.ip].instruction.c_str(), addr1, addr2);
 
 	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ins.ip]);
 
@@ -154,9 +150,7 @@ VOID BBData::printBlock(FILE *out)
 		fprintf(out, "Basic Block start:%p end:%p\n", (void *) instructions.front().ip, (void *) instructions.back().ip );
 		for(size_t i = 0; i < instructions.size(); i++)
 		{
-			char decode[128];
-			disassemblyToBuff(decode, (void *) instructions[i].ip);
-			fprintf(out,"%p\t%s\n", (void *) instructions[i].ip, decode);
+			fprintf(out,"%p\t%s\n", (void *) instructions[i].ip, debugData[instructions[i].ip].instruction.c_str());
 		}
 	}
 	fprintf(out, "Successors:\n");
@@ -192,9 +186,7 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 	for(size_t i = 0; i < instructions.size(); i++)
 	{
 		// instructionCount++;
-		// char buff[256];
-		// disassemblyToBuff(buff, (void *) instructions[i].ip);
-		// fprintf(out, "%p\t%s\n", (void *) instructions[i].ip, buff);
+		// fprintf(out, "%p\t%s\n", (void *) instructions[i].ip, debugData[instructions[i].ip].instruction.c_str());
 
 		// execute instruction
 		if(instructions[i].type == X87_INS_TYPE)
@@ -214,9 +206,7 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 				// this->printBlock(out);
 				if(KnobDebugTrace)
 				{
-					char buff[256];
-					disassemblyToBuff(buff, (void *) instructions[i].ip);
-					fprintf(out, "Lacking Addrs %p\t%s\n", (void *) instructions[i].ip, buff);
+					fprintf(out, "Lacking Addrs %p\t%s\n", (void *) instructions[i].ip, debugData[instructions[i].ip].instruction.c_str());
 
 				}
 				break;

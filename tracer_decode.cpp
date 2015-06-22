@@ -237,14 +237,12 @@ instructionType decodeInstructionData(ADDRINT ip, unordered_map<ADDRINT,instruct
 // Standard form of instruction tracing for debugging
 void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemory &shadowMemory )
 {
-	char decodeBuffer[1024];
 	xed_state_t dstate;
 	xed_state_zero(&dstate);
 	xed_state_init2(&dstate,XED_MACHINE_MODE_LONG_64,XED_ADDRESS_WIDTH_64b);
 	xed_decoded_inst_t ins;
 	xed_decoded_inst_zero_set_mode(&ins, &dstate);
 	xed_decode(&ins,STATIC_CAST(const xed_uint8_t*,ip),15);
-	disassemblyToBuffInternal(decodeBuffer, ip, &ins);
 	const xed_inst_t *xedins = xed_decoded_inst_inst(&ins);
 
 	int numOperands = xed_decoded_inst_noperands(&ins);
@@ -257,9 +255,7 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 	PIN_GetSourceLocation((ADDRINT)ip, &source_column, &source_line, &source_file);
 	PIN_UnlockClient();
 
-
-	// fprintf(out, "%p:%s,%d:%s\t\tOps(%d)", ip, source_file.c_str(), source_line, decodeBuffer,numOperands);
-	fprintf(out, "%p:%s\t\tOps(%d)", ip, decodeBuffer,numOperands);
+	fprintf(out, "%p:%s\t\tOps(%d)", ip, debugData[(ADDRINT)ip].instruction.c_str(),numOperands);
 
 	for(int i = 0; i < numOperands; i++)
 	{
@@ -355,7 +351,6 @@ VOID disassemblyToBuffInternal(char * decodeBuffer, VOID *ip, const xed_decoded_
                                pi.blen);
         pi.blen = xed_strncat(pi.buf," syntax.",pi.blen);
     }
-	//xed_format_intel(&ins,decodeBuffer,1024,STATIC_CAST(xed_uint64_t,ip));	
 }
 
 VOID disassemblyToBuff(char * decodeBuffer, VOID *ip)

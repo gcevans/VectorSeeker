@@ -11,9 +11,6 @@ instructionType decodeInstructionData(ADDRINT ip, unordered_map<ADDRINT,instruct
 //Decode Instructions for debug tracing
 void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemory &shadowMemory);
 
-//Get Human readable string for instruction
-VOID disassemblyToBuff(char * decodeBuffer, VOID *ip);
-
 //Get Instruction Class String
 const char *getInstCategoryString(VOID *ip);
 

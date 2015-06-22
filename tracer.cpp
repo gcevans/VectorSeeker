@@ -202,7 +202,6 @@ void buildOutputMaps(vector<instructionLocationsData *> &pmap, map< string,map<i
 
 VOID writeLog()
 {
-	char decodeBuffer[1024];
 	bool linesFound = false;
 	bool filesFound = false;	
 	vector<instructionLocationsData *> profile_list; // sorted instructions
@@ -249,13 +248,12 @@ VOID writeLog()
 				{
 					(*current_line)[j]->logged = true;
 					VOID *ip = (VOID *)(*current_line)[j]->ip;
-					disassemblyToBuff(decodeBuffer, ip);
 					int vector_count = -1;
 					int current_vector_size = -1;
 					bool once = false;
 					map<long,long>::iterator timeit;
 	
-					fprintf(trace,"\t%p:%s:%s\n\t%s\n\t\t",ip,getInstCategoryString(ip),decodeBuffer,instructionLocations[(ADDRINT)ip].rtn_name.c_str());
+					fprintf(trace,"\t%p:%s:%s\n\t%s\n\t\t",ip,getInstCategoryString(ip),debugData[(ADDRINT) ip].instruction.c_str(),instructionLocations[(ADDRINT)ip].rtn_name.c_str());
 	
 					if(!KnobForVectorSummary)
 					{
@@ -403,9 +401,7 @@ VOID recoredBaseInst(VOID *ip)
 	if(tracinglevel == 0)
 		return;
 
-	// char buff[256];
-	// disassemblyToBuff(buff, (void *) ip);
-	// fprintf(trace, "%p\t%s\n", (void *) ip, buff);
+	// fprintf(trace, "%p\t%s\n", (void *) ip, debugData[ip].instruction.c_str());
 
 	instructionCount++;
 		
@@ -450,9 +446,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	if(tracinglevel == 0)
 		return;
 
-	// char buff[256];
-	// disassemblyToBuff(buff, (void *) ip);
-	// fprintf(trace, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ip, buff, addr1, addr2);
+	// fprintf(trace, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ip, debugData[ip].instruction.c_str(), addr1, addr2);
 
 
 	if(KnobBBVerstion)
@@ -599,6 +593,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 						{
 							instructionType insType;
 							insType = decodeInstructionData(ip, instructionLocations);
+							debugData[ip].instruction = INS_Disassemble(ins);
 							instructionLocations[ip].type = insType;
 							instructionLocations[ip].rtn_name = rtn_name;
 							UINT32 memOperands = INS_MemoryOperandCount(ins);
