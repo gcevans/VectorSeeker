@@ -9,7 +9,7 @@ using std::map;
 using std::vector;
 using std::pair;
 
-const size_t CACHESIZE = 16;
+const size_t CACHESIZE = 32;
 
 class ResultVector
 {

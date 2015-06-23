@@ -174,29 +174,26 @@ void CacheLine::write(unsigned int offset,long depth)
 //Access Memory
 long ShadowMemory::readMem(ADDRINT address)
 {
-//	long readval = shadowMemory[address];
-	long readval = cacheShadowMemory[address/cacheLineSize].read(address%cacheLineSize);
-//	fprintf(trace, "R[%p] = %ld\n", (void *)address, readval);
-	return readval;
+	return cacheShadowMemory[address/cacheLineSize].read(address%cacheLineSize);
 };
+
 //Access Register
 long ShadowMemory::readReg(size_t reg)
 {
 	return shadowRegisters[reg];	
 };
+
 //Set Memory
 void ShadowMemory::writeMem(ADDRINT address, long depth)
 {
-//	fprintf(trace, "W[%p] = %ld\n", (void *)address, depth);
-//	shadowMemory[address] = depth;
 	cacheShadowMemory[address/cacheLineSize].write(address%cacheLineSize, depth);
 };
+
 //Set Register
 void ShadowMemory::writeReg(size_t reg, long depth)
 {
 	shadowRegisters[reg] = depth;
 };
-//Reset Region
 
 //Clear
 void ShadowMemory::clear()

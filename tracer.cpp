@@ -81,10 +81,12 @@ FILE * trace;
 
 list<long long> loopStack;
 
-unordered_map<ADDRINT, BBData> basicBlocks;
+//unordered_map<size_t, BBData> basicBlocks;
+vector<BBData> basicBlocks;
+BBData empty;
 vector<pair<ADDRINT,UINT32> > rwAddressLog;
-ADDRINT lastBB;
-ADDRINT UBBID;
+size_t lastBB;
+size_t UBBID;
 
 // BBL Debug Globals
 FILE *bbl_log;
@@ -356,11 +358,14 @@ VOID writeOnOffLog()
 
 void WriteBBDotLog(FILE *out)
 {
-	for(auto it = basicBlocks.begin(); it != basicBlocks.end(); it++)
+	// for(auto it = basicBlocks.begin(); it != basicBlocks.end(); it++)
+	// {
+	// 	(*it).second.printBlock(out);
+	// }
+	for(auto bb : basicBlocks)
 	{
-		(*it).second.printBlock(out);
+		bb.printBlock(out);
 	}
-
 }
 
 
@@ -384,11 +389,18 @@ VOID Fini(INT32 code, VOID *v)
 	// print basic block info
 	if(KobForPrintBasicBlocks)
 	{
-		for(auto it = basicBlocks.begin(); it != basicBlocks.end(); it++)
+	// 	for(auto it = basicBlocks.begin(); it != basicBlocks.end(); it++)
+	// 	{
+	// 		(*it).second.printBlock(trace);
+	// 	}
+		for(auto bb : basicBlocks)
 		{
-			(*it).second.printBlock(trace);
+			bb.printBlock(trace);
 		}
 	}
+
+
+
 	if(KnobBBDotLog)
 	{
 		WriteBBDotLog(bbl_log);
@@ -576,6 +588,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 	    		if(BBL_Original(bbl))
 	    		{
 	    			UBBID++;
+	    			basicBlocks.push_back(empty);
 	    			if(KnobDebugTrace)
 	    			{
 		    			logBasicBlock(bbl, UBBID);
@@ -965,6 +978,7 @@ int main(int argc, char * argv[])
 		bbl_log = fopen("bbl.log", "w");
 	}
 	UBBID = 0;
+	basicBlocks.push_back(empty);
 	tracinglevel = 0;
 	instructionCount = 0;
 	vectorInstructionCountSavings = 0;

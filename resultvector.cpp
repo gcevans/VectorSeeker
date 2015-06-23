@@ -12,6 +12,7 @@ void ResultVector::flush()
 
 void ResultVector::addToDepth(long depth)
 {
+	++execution_count;
 	if(index < CACHESIZE)
 	{
 		cache[index++] = depth;
@@ -21,7 +22,7 @@ void ResultVector::addToDepth(long depth)
 		vectors[depth] += 1;
 		flush();
 	}
-	execution_count += 1;
+//	execution_count += 1;
 }
 
 long ResultVector::getExecutionCount()
