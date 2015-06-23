@@ -38,7 +38,7 @@ VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowM
 		instructionTracing((VOID *)ins.ip,NULL,value,"Base",out,shadowMemory);
 }
 
-VOID handleMemInstBB(const instructionLocationsData &ins, pair<ADDRINT,UINT32>one, pair<ADDRINT,UINT32>two, ShadowMemory &shadowMemory, FILE *out)
+VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UINT32>&one, const pair<ADDRINT,UINT32>&two, ShadowMemory &shadowMemory, FILE *out)
 {
 
 
