@@ -22,7 +22,7 @@ tracer.o : tracer.cpp tracer.h tracerlib.h tracer_decode.h shadow.h resultvector
 tracer_decode.o : tracer_decode.cpp tracer_decode.h tracer.h instructions.h shadow.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o tracer_decode.o tracer_decode.cpp
 
-tracebb.o : tracebb.cpp tracer_decode.h tracer.h tracebb.h shadow.h instructions.h
+tracebb.o : tracebb.cpp tracer_decode.h tracer.h tracebb.h shadow.h instructions.h resultvector.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o tracebb.o tracebb.cpp
 
 shadow.o : shadow.cpp shadow.h

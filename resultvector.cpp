@@ -1,9 +1,26 @@
 #include "resultvector.h"
 #include <algorithm>
 
+void ResultVector::flush()
+{
+	for(auto i = size_t{0}; i < index; ++i)
+	{
+		vectors[cache[i]] += 1;
+	}
+	index = 0;
+}
+
 void ResultVector::addToDepth(long depth)
 {
-	vectors[depth] += 1;
+	if(index < CACHESIZE)
+	{
+		cache[index++] = depth;
+	}
+	else
+	{
+		vectors[depth] += 1;
+		flush();
+	}
 	execution_count += 1;
 }
 
@@ -14,12 +31,14 @@ long ResultVector::getExecutionCount()
 
 long ResultVector::readDepthCount(long depth)
 {
+	flush();
 	return vectors[depth];
 }
 
 
 bool ResultVector::isSingle()
 {
+	flush();
 	if( vectors.size() == 1)
 		return true;
 	
@@ -38,6 +57,7 @@ inline bool sortByFirst(pair<long,long> i, pair<long,long> j)
 
 void ResultVector::sortedVectors(vector<pair<long,long> > &sorted_vectors)
 {
+	flush();
 	for(auto rawv : vectors)
 	{
 		sorted_vectors.push_back(std::make_pair(rawv.first,rawv.second));
@@ -48,6 +68,7 @@ void ResultVector::sortedVectors(vector<pair<long,long> > &sorted_vectors)
 
 bool ResultVector::vectorsGreater(int minVector)
 {
+	flush();
 	for(auto timeit = vectors.begin(); timeit != vectors.end(); ++timeit)
 	{
 		if(timeit->second > minVector)
@@ -62,6 +83,7 @@ void ResultVector::clear()
 {
 	vectors.clear();
 	execution_count = 0;
+	index = 0;
 }
 
 
