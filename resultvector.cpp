@@ -22,7 +22,6 @@ void ResultVector::addToDepth(long depth)
 		vectors[depth] += 1;
 		flush();
 	}
-//	execution_count += 1;
 }
 
 long ResultVector::getExecutionCount()

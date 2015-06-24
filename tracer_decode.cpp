@@ -19,6 +19,8 @@ bool isIgnoredInstruction(xed_category_enum_t cat)
 		return true;
 	if(cat == XED_CATEGORY_SYSCALL)
 		return true;
+	if(cat == XED_CATEGORY_WIDENOP)
+		return true;
 
 	return false;
 }

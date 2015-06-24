@@ -364,10 +364,6 @@ VOID writeOnOffLog()
 
 void WriteBBDotLog(FILE *out)
 {
-	// for(auto it = basicBlocks.begin(); it != basicBlocks.end(); it++)
-	// {
-	// 	(*it).second.printBlock(out);
-	// }
 	for(auto bb : basicBlocks)
 	{
 		bb.printBlock(out);
@@ -386,27 +382,24 @@ VOID Fini(INT32 code, VOID *v)
 		else
 			writeOnOffLog();
 	}
+
 	if(KnobSummaryOn)
 	{
 		fprintf(trace, "#Start Summary\n");
 		fprintf(trace, "#Total Instructions (No Vector Instructions) = %u\n", instructionCount);
 		fprintf(trace, "#Total Instructions (Vector Instructions) = %u\n", instructionCount - vectorInstructionCountSavings);
 	}
+
 	// print basic block info
 	if(KobForPrintBasicBlocks)
 	{
-	// 	for(auto it = basicBlocks.begin(); it != basicBlocks.end(); it++)
-	// 	{
-	// 		(*it).second.printBlock(trace);
-	// 	}
 		for(auto bb : basicBlocks)
 		{
 			bb.printBlock(trace);
 		}
 	}
 
-
-
+	// Stub for dot format graph of basic blocks
 	if(KnobBBDotLog)
 	{
 		WriteBBDotLog(bbl_log);
@@ -418,8 +411,6 @@ VOID recoredBaseInst(VOID *ip)
 {
 	if(tracinglevel == 0 || inAlloc)
 		return;
-
-	// fprintf(trace, "%p\t%s\n", (void *) ip, debugData[ip].instruction.c_str());
 
 	instructionCount++;
 		
@@ -448,6 +439,7 @@ VOID recoredBaseInst(VOID *ip)
 		current_instruction->loopid = loopStack;
 #endif
 	}
+
 	if(KnobDebugTrace)
 		instructionTracing(ip,NULL,value,"Base",trace,shadowMemory);
 }
@@ -465,14 +457,10 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	if(tracinglevel == 0 || inAlloc)
 		return;
 
-	// fprintf(trace, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ip, debugData[ip].instruction.c_str(), addr1, addr2);
-
-
 	if(KnobBBVerstion)
 	{
 		rwAddressLog.push_back( make_pair((ADDRINT) addr1, t1) );
 		rwAddressLog.push_back( make_pair((ADDRINT) addr2, t2) );
-		// fprintf(trace, "two ops written for %p\n", ip);
 		return;
 	}
 
@@ -483,25 +471,20 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	if(type1 & READ_OPERATOR_TYPE)
 	{
 		value = shadowMemory.readMem((ADDRINT)addr1);
-//		fprintf(trace,"R1[%p]=%ld\n",addr1,shadowMemory.readMem((ADDRINT)addr1));
 	}
 
 	if(type2 & READ_OPERATOR_TYPE)
 	{
 		value = max(shadowMemory.readMem((ADDRINT)addr2), value);
-//		fprintf(trace,"R2[%p]=%ld\n",addr2,shadowMemory.readMem((ADDRINT)addr2));
 	}
 
 	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ip]);
 
-//	fprintf(trace, "After all memory reads value = %ld\n", value);
 
 	for(unsigned int i = 0; i < current_instruction->registers_read.size(); i++)
 	{
 		value = max(shadowMemory.readReg(current_instruction->registers_read[i]),value);
 	}
-
-//	fprintf(trace, "After all reads value = %ld\n", value);
 		
 	if(value > 0 && (current_instruction->type != MOVEONLY_INS_TYPE))
 	{
@@ -523,7 +506,6 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 			region1 = 0;
 
 		shadowMemory.writeMem((ADDRINT)addr1, max(value,region1));
-//		fprintf(trace,"W1[%p]=%ld\n",addr1,shadowMemory[(ADDRINT)addr1]);
 	}
 
 	if(type2 & WRITE_OPERATOR_TYPE)
@@ -534,7 +516,6 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 			region2 = 0;
 
 		shadowMemory.writeMem((ADDRINT)addr2, max(value,region2));
-//		fprintf(trace,"W2[%p]=%ld\n",addr2,shadowMemory[(ADDRINT)addr2]);
 	}
 
 	value = max(max(value,region1),region2);
@@ -551,7 +532,6 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	{
 		instructionTracing(ip,addr2,value,"Mem",trace, shadowMemory);
 		fprintf(trace,"<%p,%u><%p,%u>", addr1, type1, addr2, type2);
-		// shadowMemory.printAllocationMap(trace);
 	}
 }
 
@@ -562,13 +542,12 @@ VOID blockTracer(VOID *ip, ADDRINT id)
 
 	if(tracinglevel && lastBB && !inAlloc)
 	{
-		// fprintf(trace, "Call UBBID %p\n", (void *) lastBB );
 		basicBlocks[lastBB].execute(rwAddressLog, shadowMemory, trace);
 		basicBlocks[lastBB].addSuccessors((ADDRINT) ip);
 		if(KnobDebugTrace)
 		{
 			fprintf(trace, "BBL %p executed\n", (void *) lastBB);
-		//	basicBlocks[lastBB].printBlock(trace);
+			basicBlocks[lastBB].printBlock(trace);
 		}
 	}
 	lastBB = id;
@@ -843,16 +822,14 @@ VOID MallocAfter(ADDRINT ret, THREADID threadid)
 
 VOID Image(IMG img, VOID *v)
 {
-    // Instrument the malloc() and free() functions.  Print the input argument
-    // of each malloc() or free(), and the return value of malloc().
-    //
+    // Instrument the malloc() and free() functions. 
+
     //  Find the malloc() function.
     RTN mallocRtn = RTN_FindByName(img, MALLOC);
     if (RTN_Valid(mallocRtn))
     {
         RTN_Open(mallocRtn);
 
-        // Instrument malloc() to print the input argument value and the return value.
         RTN_InsertCall(mallocRtn, IPOINT_BEFORE, (AFUNPTR)MallocBefore,
                        IARG_ADDRINT, MALLOC,
                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
@@ -869,7 +846,7 @@ VOID Image(IMG img, VOID *v)
     if (RTN_Valid(freeRtn))
     {
         RTN_Open(freeRtn);
-        // Instrument free() to print the input argument value.
+
         RTN_InsertCall(freeRtn, IPOINT_BEFORE, (AFUNPTR)FreeBefore,
                        IARG_ADDRINT, FREE,
                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
@@ -879,7 +856,8 @@ VOID Image(IMG img, VOID *v)
                        IARG_END);
         RTN_Close(freeRtn);
     }
-    //Enable Tracing
+
+    // Enable Tracing based on traceon 
     RTN traceRtn = RTN_FindByName(img, TRACE_ON);
     if (RTN_Valid(traceRtn))
     {
@@ -891,7 +869,7 @@ VOID Image(IMG img, VOID *v)
                        IARG_END);
         RTN_Close(traceRtn);
     }
-    //End Tracing
+    // End Tracing based on traceoff
     traceRtn = RTN_FindByName(img, TRACE_OFF);
     if (RTN_Valid(traceRtn))
     {
@@ -903,6 +881,8 @@ VOID Image(IMG img, VOID *v)
                        IARG_END);
         RTN_Close(traceRtn);
     }
+
+    // Mark memmory as vector memory based on arrayMem calls.
     traceRtn = RTN_FindByName(img, ARRAY_MEM);
     if (RTN_Valid(traceRtn))
     {
@@ -923,7 +903,8 @@ VOID Image(IMG img, VOID *v)
         RTN_Close(traceRtn);
     }
 
-#ifdef LOOPSTACK    
+#ifdef LOOPSTACK
+    // Track loop contexts
     traceRtn = RTN_FindByName(img, LOOP_START);
     if (RTN_Valid(traceRtn))
     {
@@ -944,6 +925,7 @@ VOID Image(IMG img, VOID *v)
     }
 #endif
  
+ 	// Start tracing based on fucntion name defaults to main
     traceRtn = RTN_FindByName(img, KnobTraceFunction.Value().c_str());
     if (RTN_Valid(traceRtn))
     {

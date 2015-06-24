@@ -8,8 +8,6 @@ extern unsigned instructionCount;
 
 VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowMemory, FILE *out)
 {
-	// fprintf(out, "%p\t%s\n", (void *) ins.ip, debugData[ins.ip].instruction.c_str());
-
 	++instructionCount;
 		
 	long value = 0;
@@ -23,7 +21,6 @@ VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowM
 		value = value + 1;
 	}
 
-//	for(unsigned int i = 0; i < ins.registers_written.size(); i++)
 	for(auto reg : ins.registers_written)
 	{
 		shadowMemory.writeReg(reg, value);
@@ -48,31 +45,23 @@ VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UIN
 	VOID *addr2 = (VOID *) two.first;
 	UINT32 type2 = two.second;
 
-	// fprintf(out, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ins.ip, debugData[ins.ip].instruction.c_str(), addr1, addr2);
-
 
 	long value = 0;
 	
 	if(type1 & READ_OPERATOR_TYPE)
 	{
 		value = shadowMemory.readMem((ADDRINT)addr1);
-//		fprintf(trace,"R1[%p]=%ld\n",addr1,shadowMemory.readMem((ADDRINT)addr1));
 	}
 
 	if(type2 & READ_OPERATOR_TYPE)
 	{
 		value = max(shadowMemory.readMem((ADDRINT)addr2), value);
-//		fprintf(trace,"R2[%p]=%ld\n",addr2,shadowMemory.readMem((ADDRINT)addr2));
 	}
-
-//	fprintf(trace, "After all memory reads value = %ld\n", value);
 
 	for(unsigned int i = 0; i < ins.registers_read.size(); i++)
 	{
 		value = max(shadowMemory.readReg(ins.registers_read[i]),value);
 	}
-
-//	fprintf(trace, "After all reads value = %ld\n", value);
 		
 	if(value > 0 && (ins.type != MOVEONLY_INS_TYPE))
 	{
@@ -94,7 +83,6 @@ VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UIN
 			region1 = 0;
 
 		shadowMemory.writeMem((ADDRINT)addr1, max(value,region1));
-//		fprintf(trace,"W1[%p]=%ld\n",addr1,shadowMemory[(ADDRINT)addr1]);
 	}
 
 	if(type2 & WRITE_OPERATOR_TYPE)
@@ -105,7 +93,6 @@ VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UIN
 			region2 = 0;
 
 		shadowMemory.writeMem((ADDRINT)addr2, max(value,region2));
-//		fprintf(trace,"W2[%p]=%ld\n",addr2,shadowMemory[(ADDRINT)addr2]);
 	}
 
 	value = max(max(value,region1),region2);
@@ -119,7 +106,6 @@ VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UIN
 	{
 		instructionTracing(ip,addr2,value,"Mem",out, shadowMemory);
 		fprintf(out,"<%p,%u><%p,%u>\n", addr1, type1, addr2, type2);
-		// shadowMemory.printAllocationMap(out);
 	}
 
 }
@@ -165,7 +151,7 @@ void printAddrs(const vector<pair<ADDRINT,UINT32> > &addrs, FILE *out)
 
 VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowMemory, FILE *out)
 {
-	if(instructions.size() == 0)
+	if(instructions.size() == 0) // probably a bare call
 		return;
 
 	size_t memOpsCount = 0;
@@ -177,9 +163,6 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 
 	for(size_t i = 0; i < instructions.size(); i++)
 	{
-		// instructionCount++;
-		// fprintf(out, "%p\t%s\n", (void *) instructions[i].ip, debugData[instructions[i].ip].instruction.c_str());
-
 		// execute instruction
 		if(instructions[i].type == X87_INS_TYPE)
 		{
@@ -195,7 +178,7 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 			if( (memOpsCount+2) > addrs.size())
 			{
 				fprintf(out, "incomplete block data\n");
-				// this->printBlock(out);
+
 				if(KnobDebugTrace)
 				{
 					fprintf(out, "Lacking Addrs %p\t%s\n", (void *) instructions[i].ip, debugData[instructions[i].ip].instruction.c_str());

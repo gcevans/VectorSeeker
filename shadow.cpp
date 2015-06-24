@@ -6,8 +6,11 @@
 CacheLine::CacheLine()
 {
 	elementSize = one;
+
 	memory =  malloc(sizeof(unsigned char) * cacheLineSize);
+
 	unsigned char *ptr = (unsigned char *) memory;
+
 	for(int i = 0; i < cacheLineSize; i++)
 	{
 		ptr[i] = 0;
@@ -19,11 +22,32 @@ CacheLine::~CacheLine()
 	free(memory);
 }
 
+void CacheLine::swap(CacheLine &s)
+{
+	void *tmp_mem = memory;
+	memory = s.memory;
+	s.memory = tmp_mem;
+
+	elementSizes tmp_ele = elementSize;
+	elementSize = s.elementSize;
+	s.elementSize = tmp_ele;
+}
+
 CacheLine& CacheLine::operator=(const CacheLine& s)
 {
-	if(memory != NULL)
-		free(memory);
+	CacheLine tmp(s);
+	swap(tmp);
+	return *this;
+}
 
+CacheLine& CacheLine::operator=(CacheLine&& rhs)
+{
+	swap(rhs);
+	return *this;
+}
+
+CacheLine::CacheLine(const CacheLine &s)
+{
 	elementSize = s.elementSize;
 
 	switch (elementSize)
@@ -64,23 +88,11 @@ CacheLine& CacheLine::operator=(const CacheLine& s)
 		default:
 			assert(false);
 	}
-	return *this;
-}
-
-CacheLine::CacheLine(const CacheLine &s)
-{
-	memory = NULL;
-	*this = s;
-//	for(int i= 0; i < cacheLineSize; i++)
-//	{
-//		memory[i] = s.memory[i];
-//	}
 }
 
 //read from cache line
 long CacheLine::read(unsigned int offset)
 {
-//	return memory[offset];
 	switch (elementSize)
 	{
 		case one:
@@ -108,9 +120,7 @@ long CacheLine::read(unsigned int offset)
 
 //write to cache line
 void CacheLine::write(unsigned int offset,long depth)
-{	
-//	memory[offset] = depth;
-
+{
 	switch (elementSize)
 	{
 		case one:
