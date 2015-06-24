@@ -76,6 +76,7 @@ unordered_map<ADDRINT, instructionDebugData> debugData;
 unordered_map<ADDRINT, ResultVector > instructionResults;
 unsigned vectorInstructionCountSavings;
 int traceRegionCount;
+bool inAlloc;
 
 FILE * trace;
 
@@ -415,7 +416,7 @@ VOID Fini(INT32 code, VOID *v)
 
 VOID recoredBaseInst(VOID *ip)
 {
-	if(tracinglevel == 0)
+	if(tracinglevel == 0 || inAlloc)
 		return;
 
 	// fprintf(trace, "%p\t%s\n", (void *) ip, debugData[ip].instruction.c_str());
@@ -461,7 +462,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	UINT32 type1 = t1;
 	UINT32 type2 = t2;
 
-	if(tracinglevel == 0)
+	if(tracinglevel == 0 || inAlloc)
 		return;
 
 	// fprintf(trace, "%p\t%s addr1 = %p addr2 = %p\n", (void *) ip, debugData[ip].instruction.c_str(), addr1, addr2);
@@ -559,7 +560,7 @@ VOID blockTracer(VOID *ip, ADDRINT id)
 	if(!KnobBBVerstion)
 		return;
 
-	if(tracinglevel && lastBB)
+	if(tracinglevel && lastBB && !inAlloc)
 	{
 		// fprintf(trace, "Call UBBID %p\n", (void *) lastBB );
 		basicBlocks[lastBB].execute(rwAddressLog, shadowMemory, trace);
@@ -688,6 +689,8 @@ VOID Trace(TRACE pintrace, VOID *v)
 // Malloc Stuff
 VOID MallocBefore(CHAR * name, ADDRINT size, THREADID threadid)
 {
+	inAlloc = true;
+
 	if(KnobSupressMalloc)
 		return;
 	thread_data_t* tdata = get_tls(threadid);
@@ -697,10 +700,17 @@ VOID MallocBefore(CHAR * name, ADDRINT size, THREADID threadid)
 // Free case
 VOID FreeBefore(CHAR * name, ADDRINT start, THREADID threadid)
 {
+	inAlloc = true;
+
 	if(KnobSupressMalloc)
 		return;
 
 	shadowMemory.arrayMemClear(start);
+}
+
+VOID FreeAfter()
+{
+	inAlloc = false;
 }
 
 // tracing on
@@ -816,6 +826,8 @@ VOID loopEnd(ADDRINT id)
 
 VOID MallocAfter(ADDRINT ret, THREADID threadid)
 {
+	inAlloc = false;
+
 	if(KnobSupressMalloc)
 		return;
 	
@@ -862,6 +874,8 @@ VOID Image(IMG img, VOID *v)
                        IARG_ADDRINT, FREE,
                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
                        IARG_THREAD_ID,
+                       IARG_END);
+        RTN_InsertCall(freeRtn, IPOINT_BEFORE, (AFUNPTR)FreeAfter,
                        IARG_END);
         RTN_Close(freeRtn);
     }
@@ -998,6 +1012,7 @@ int main(int argc, char * argv[])
 	instructionCount = 0;
 	vectorInstructionCountSavings = 0;
 	traceRegionCount = 0;
+	inAlloc = false;
 #ifdef LOOPSTACK
 	loopStack.push_front(-1);
 #endif
@@ -1013,7 +1028,6 @@ int main(int argc, char * argv[])
     PIN_AddThreadStartFunction(ThreadStart, 0);
 
     // Register Instruction to be called to instrument instructions
-//	RTN_AddInstrumentFunction(Routine, 0);
 	IMG_AddInstrumentFunction(Image, 0);
 	TRACE_AddInstrumentFunction(Trace, 0);
 
