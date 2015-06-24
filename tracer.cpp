@@ -79,7 +79,9 @@ int traceRegionCount;
 
 FILE * trace;
 
+#ifdef LOOPSTACK
 list<long long> loopStack;
+#endif
 
 //unordered_map<size_t, BBData> basicBlocks;
 vector<BBData> basicBlocks;
@@ -231,6 +233,7 @@ VOID writeLog()
 
 		if(!(ins->logged) && (file_name != "NO FILE INFORMATION" || KnobForShowNoFileInfo ) && (instructionResults[ins->ip].getExecutionCount() > 0))
 		{
+#ifdef LOOPSTACK
 			std::ostringstream loopstackstring;
 			for(std::list<long long>::reverse_iterator it = ins->loopid.rbegin(); it != ins->loopid.rend();)
 			{
@@ -241,6 +244,8 @@ VOID writeLog()
 			}
 				
 			fprintf(trace,"%s,%d<%s>:%ld\n", file_name.c_str(),line_number,loopstackstring.str().c_str(),instructionResults[ins->ip].getExecutionCount());
+#endif
+			fprintf(trace,"%s,%d:%ld\n", file_name.c_str(),line_number,instructionResults[ins->ip].getExecutionCount());
 
 			current_line = &(line_map[debugData[ins->ip].file_name][line_number]);
 			sort(current_line->begin(),current_line->end(),instructionLocationsDataPointerAddrSort);
@@ -438,7 +443,9 @@ VOID recoredBaseInst(VOID *ip)
 	if(value > 0 && (!((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[(ADDRINT)ip].addToDepth(value);
+#ifdef LOOPSTACK
 		current_instruction->loopid = loopStack;
+#endif
 	}
 	if(KnobDebugTrace)
 		instructionTracing(ip,NULL,value,"Base",trace,shadowMemory);
@@ -534,7 +541,9 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	if(value > 0 && !(((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
 		instructionResults[(ADDRINT)ip].addToDepth(value);
+#ifdef LOOPSTACK
 		current_instruction->loopid = loopStack;
+#endif
 	}
 
 	if(KnobDebugTrace)
@@ -793,6 +802,7 @@ VOID arrayMemClear(ADDRINT start)
 	shadowMemory.arrayMemClear(start);
 }
 
+#ifdef LOOPSTACK
 VOID loopStart(ADDRINT id)
 {
 	loopStack.push_front((long long) id);
@@ -802,6 +812,7 @@ VOID loopEnd(ADDRINT id)
 {
 	loopStack.pop_front();
 }
+#endif
 
 VOID MallocAfter(ADDRINT ret, THREADID threadid)
 {
@@ -897,6 +908,8 @@ VOID Image(IMG img, VOID *v)
                        IARG_END);
         RTN_Close(traceRtn);
     }
+
+#ifdef LOOPSTACK    
     traceRtn = RTN_FindByName(img, LOOP_START);
     if (RTN_Valid(traceRtn))
     {
@@ -915,6 +928,8 @@ VOID Image(IMG img, VOID *v)
                        IARG_END);
         RTN_Close(traceRtn);
     }
+#endif
+ 
     traceRtn = RTN_FindByName(img, KnobTraceFunction.Value().c_str());
     if (RTN_Valid(traceRtn))
     {
@@ -983,7 +998,9 @@ int main(int argc, char * argv[])
 	instructionCount = 0;
 	vectorInstructionCountSavings = 0;
 	traceRegionCount = 0;
+#ifdef LOOPSTACK
 	loopStack.push_front(-1);
+#endif
 	clearState();
 
     // Initialize the lock
