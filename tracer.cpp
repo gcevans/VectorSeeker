@@ -190,8 +190,10 @@ KNOB<bool> KnobBBVerstion(KNOB_MODE_WRITEONCE, "pintool",
 	"bb", "0", "Use PIN basic block mode");
 
 KNOB<bool> KnobBBDotLog(KNOB_MODE_WRITEONCE, "pintool",
-	"bb-dot", "0", "Log Pin Basic Blocks in dot format");
+	"bb-dot", "0", "Log PIN basic blocks in dot format");
 
+KNOB<bool> KnobBBReport(KNOB_MODE_WRITEONCE, "pintool",
+	"bb-report", "0",  "Final report on basic blocks");
 
 void buildOutputMaps(vector<instructionLocationsData *> &pmap, map< string,map<int,vector<instructionLocationsData *>>> &lmap)
 {
@@ -370,6 +372,47 @@ void WriteBBDotLog(FILE *out)
 	}
 }
 
+void writeBBReport()
+{
+
+	for(auto bb : basicBlocks)
+	{
+		vector<ADDRINT> addrs = bb.getAddrs();
+		bool allSingle = true;
+		bool allZero = true;
+		bool someGreater = false;
+		for(auto addr : addrs)
+		{
+			if(!(instructionResults[addr].isSingle() || instructionResults[addr].isZero()))
+				allSingle = false;
+			if(!instructionResults[addr].isZero())
+				allZero = false;
+			if(instructionResults[addr].vectorsGreater(KnobMinVectorCount.Value()))
+				someGreater = true;
+		}
+		if(allSingle && !allZero && someGreater)
+		{
+//			bb.printBlock(trace);
+			fprintf(trace, "Basic block staring %p end %p\n", (void *)addrs.front(), (void *)addrs.back() );
+			map<string,vector<int>> sources;
+			for(auto addr : addrs)
+			{
+				sources[debugData[addr].file_name].push_back(debugData[addr].line_number);
+			}
+			for(auto line : sources)
+			{
+				sort(line.second.begin(), line.second.end());
+
+				fprintf(trace, "%s,%d", line.first.c_str(), line.second.front() );
+				if(line.second.front() != line.second.back())
+					fprintf(trace, "-%d\n", line.second.back());
+				else
+					fprintf(trace, "\n");
+			}
+		}
+	}
+
+}
 
 // This function is called when the application exits
 VOID Fini(INT32 code, VOID *v)
@@ -377,10 +420,18 @@ VOID Fini(INT32 code, VOID *v)
 	if(tracinglevel != 0)
 	{
 		fprintf(trace,"Progam ended with tracing on\n");
-		if(!KnobVectorLineSummary)
-			writeLog();
-		else
+		if(KnobVectorLineSummary)
+		{
 			writeOnOffLog();
+		}
+		else if(KnobBBReport)
+		{
+			writeBBReport();
+		}
+		else
+		{
+			writeLog();
+		}
 	}
 
 	if(KnobSummaryOn)
@@ -747,13 +798,17 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 	{
 		blockTracer(NULL, 0); // trace final block
 		shadowMemory.clear();
-		if(!KnobVectorLineSummary)
+		if(KnobVectorLineSummary)
 		{
-			writeLog();
+			writeOnOffLog();
+		}
+		else if(KnobBBReport)
+		{
+			writeBBReport();
 		}
 		else
 		{
-			writeOnOffLog();
+			writeLog();
 		}
 		tracinglevel = 0;
 	}

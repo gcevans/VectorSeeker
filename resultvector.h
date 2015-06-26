@@ -26,10 +26,12 @@ public:
 	void addToDepth(long depth);
 	long readDepthCount(long depth);
 	bool isSingle();
+	bool isZero();
 	void sortedVectors(vector<pair<long,long> > &sorted_vectors);
 	bool vectorsGreater(int minVector);
 	void clear();
 	long getExecutionCount();
+	void printVector(FILE *out);
 };
 
 #endif

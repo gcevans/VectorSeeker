@@ -45,6 +45,15 @@ bool ResultVector::isSingle()
 	return false;
 }
 
+bool ResultVector::isZero()
+{
+	flush();
+	if( vectors.size() == 0)
+		return true;
+	
+	return false;
+}
+
 inline bool sortBySecond(pair<long,long> i, pair<long,long> j)
 {
 	return(i.second > j.second);
@@ -86,5 +95,11 @@ void ResultVector::clear()
 	index = 0;
 }
 
-
+void ResultVector::printVector(FILE *out)
+{
+	for(auto vec : vectors)
+	{
+		fprintf(out, "<%ld,%ld>", vec.first, vec.second);
+	}
+}
 

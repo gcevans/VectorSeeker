@@ -208,3 +208,15 @@ VOID BBData::addSuccessors(ADDRINT s)
 {
 	successors.insert(s);
 }
+
+vector<ADDRINT> BBData::getAddrs()
+{
+	vector<ADDRINT> addrs;
+
+	for(auto ins : instructions)
+	{
+		addrs.push_back(ins.ip);
+	}
+	return addrs;
+}
+

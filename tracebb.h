@@ -24,6 +24,7 @@ public:
 	VOID printBlock(FILE *out);
 	VOID execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowMemory, FILE *out);
 	VOID addSuccessors(ADDRINT successor);
+	vector<ADDRINT> getAddrs();
 };
 
 #endif
