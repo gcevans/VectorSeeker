@@ -36,7 +36,7 @@ long ResultVector::readDepthCount(long depth)
 }
 
 
-bool ResultVector::isSingle()
+const bool ResultVector::isSingle()
 {
 	flush();
 	if( vectors.size() == 1)
@@ -45,7 +45,7 @@ bool ResultVector::isSingle()
 	return false;
 }
 
-bool ResultVector::isZero()
+const bool ResultVector::isZero()
 {
 	flush();
 	if( vectors.size() == 0)
