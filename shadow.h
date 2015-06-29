@@ -4,6 +4,7 @@
 #include "pin.H"
 #include "instlib.H"
 #include <unordered_map>
+#include <map>
 
 const int cacheLineSize = 128;
 
@@ -32,7 +33,7 @@ class ShadowMemory
 private:
 	long shadowRegisters[XED_REG_LAST]; // Register Memory
 	unordered_map<ADDRINT,CacheLine> cacheShadowMemory;
-	unordered_map<ADDRINT,size_t> allocationMap;
+	map<ADDRINT,size_t> allocationMap;
 
 public:
 	//Access Memory

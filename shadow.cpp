@@ -244,15 +244,26 @@ void ShadowMemory::arrayMemClear(ADDRINT start)
 
 bool ShadowMemory::memIsArray(VOID *addr)
 {
-	for(auto it = allocationMap.begin(); it != allocationMap.end(); it++)
-	{
-		if( ( (size_t) addr >= (size_t)(*it).first) && ((size_t)(*it).first + (*it).second > (size_t)addr) )
-		{
-			return true;
-		}
+	auto it = allocationMap.upper_bound((size_t) addr);
 
+	if(it != allocationMap.end())
+	{
+		--it;
+		if(((size_t)(*it).first + (*it).second > (size_t)addr))
+			return true;
 	}
+
 	return false;
+
+	// for(auto it = allocationMap.begin(); it != allocationMap.end(); it++)
+	// {
+	// 	if( ( (size_t) addr >= (size_t)(*it).first) && ((size_t)(*it).first + (*it).second > (size_t)addr) )
+	// 	{
+	// 		return true;
+	// 	}
+
+	// }
+	// return false;
 }
 
 void ShadowMemory::printAllocationMap(FILE *out)
