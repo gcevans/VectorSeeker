@@ -11,7 +11,7 @@
 VOID disassemblyToBuffInternal(char * decodeBuffer, VOID *ip, const xed_decoded_inst_t *ins);
 
 // Do no tracing for these instruction categories
-bool isIgnoredInstruction(xed_category_enum_t cat)
+bool isIgnoredInstruction(const xed_category_enum_t cat)
 {
 	if(cat == XED_CATEGORY_NOP)
 		return true;
@@ -26,7 +26,7 @@ bool isIgnoredInstruction(xed_category_enum_t cat)
 }
 
 // Instructions only move data and do no computation
-bool isMoveOnlyInstruction(xed_category_enum_t cat)
+bool isMoveOnlyInstruction(const xed_category_enum_t cat)
 {
 	if(cat == XED_CATEGORY_DATAXFER)
 		return true;
@@ -35,9 +35,23 @@ bool isMoveOnlyInstruction(xed_category_enum_t cat)
 }
 
 // Instruction uses x87
-bool isX87Instruction(xed_category_enum_t cat)
+bool isX87Instruction(const xed_category_enum_t cat)
 {
 	return(cat == XED_CATEGORY_X87_ALU);
+}
+
+bool isIgnoredX87Instruction(const xed_iclass_enum_t iclass)
+{
+	if(iclass == XED_ICLASS_FNSTCW)
+		return true;
+
+	if(iclass == XED_ICLASS_FNCLEX)
+		return true;
+
+	if(iclass == XED_ICLASS_FLDCW)
+		return true;
+
+	return false;
 }
 
 // Do not trace dependencies through these registers
@@ -94,12 +108,21 @@ instructionType decodeInstructionData(ADDRINT ip, unordered_map<ADDRINT,instruct
 	xed_decode(&(ins),STATIC_CAST(const xed_uint8_t*,ip),15);
 	xedins = xed_decoded_inst_inst(&(ins));
 	xed_category_enum_t cat = xed_inst_category(xedins);
+
 	if(isIgnoredInstruction(cat))
 		insType = IGNORED_INS_TYPE;
+
 	if(isMoveOnlyInstruction(cat))
 		insType = MOVEONLY_INS_TYPE;
+
 	if(isX87Instruction(cat))
-		insType = X87_INS_TYPE;
+	{
+		if(isIgnoredX87Instruction(xed_decoded_inst_get_iclass(&ins)))
+			insType = IGNORED_INS_TYPE;
+
+		else
+			insType = X87_INS_TYPE;
+	}
 	
 	int numOperands = xed_decoded_inst_noperands(&(ins));
 	int numMemOps = xed_decoded_inst_number_of_memory_operands(&ins);
