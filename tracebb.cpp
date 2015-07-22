@@ -149,7 +149,8 @@ void printAddrs(const vector<pair<ADDRINT,UINT32> > &addrs, FILE *out)
 	fprintf(out, "\n");
 }
 
-VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowMemory, FILE *out)
+//VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowMemory, FILE *out)
+VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, FILE *out)
 {
 	if(instructions.size() == 0) // probably a bare call
 		return;
@@ -175,19 +176,21 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 		}
 		else if(instructions[i].memOperands < 3)
 		{
-			if( (memOpsCount+2) > addrs.size())
+			if( (memOpsCount+2) > contexts.addrs.size())
 			{
 				fprintf(out, "incomplete block data\n");
 
-				if(KnobDebugTrace)
+//				if(KnobDebugTrace)
 				{
 					fprintf(out, "Lacking Addrs %p\t%s\n", (void *) instructions[i].ip, debugData[instructions[i].ip].instruction.c_str());
-
+					this->printBlock(out);
 				}
 				break;
 			}
 
-			handleMemInstBB(instructions[i], addrs[memOpsCount], addrs[memOpsCount+1], shadowMemory, out);
+			if(contexts.pred[memOpsCount/2])
+				handleMemInstBB(instructions[i], contexts.addrs[memOpsCount], contexts.addrs[memOpsCount+1], shadowMemory, out);
+	
 			memOpsCount += 2;
 		}
 		else
@@ -199,9 +202,9 @@ VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowM
 	{
 		fprintf(out, "Done Executing Block Ending %p\n", (void *) instructions.back().ip);
 		this->printBlock(out);
-		printAddrs(addrs, out);
+		printAddrs(contexts.addrs, out);
 	}
-	addrs.clear();
+	contexts.addrs.clear();
 }
 
 VOID BBData::addSuccessors(ADDRINT s)

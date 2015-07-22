@@ -87,7 +87,8 @@ list<long long> loopStack;
 //unordered_map<size_t, BBData> basicBlocks;
 vector<BBData> basicBlocks;
 BBData empty;
-vector<pair<ADDRINT,UINT32> > rwAddressLog;
+// vector<pair<ADDRINT,UINT32> > rwAddressLog;
+ExecutionContex rwContext;
 size_t lastBB;
 size_t UBBID;
 
@@ -500,7 +501,7 @@ const UINT32 READ_OPERATOR_TYPE = 1;
 const UINT32 WRITE_OPERATOR_TYPE = 2;
 const UINT32 BOTH_OPERATOR_TYPE = 3;
 
-VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t2)
+VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t2, bool pred)
 {
 	UINT32 type1 = t1;
 	UINT32 type2 = t2;
@@ -510,8 +511,18 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 	if(KnobBBVerstion)
 	{
-		rwAddressLog.push_back( make_pair((ADDRINT) addr1, t1) );
-		rwAddressLog.push_back( make_pair((ADDRINT) addr2, t2) );
+		rwContext.addrs.push_back( make_pair((ADDRINT) addr1, t1) );
+		rwContext.addrs.push_back( make_pair((ADDRINT) addr2, t2) );
+		rwContext.pred.push_back(pred);
+		if(KnobDebugTrace)
+			fprintf(trace,"%p:<%p,%u><%p,%u>\n", (void*) ip, addr1, type1, addr2, type2);
+		return;
+	}
+
+	if(!pred)
+	{
+		if(KnobDebugTrace)
+			fprintf(trace, "%p:pred not executed\n", (void*) ip);
 		return;
 	}
 
@@ -593,7 +604,7 @@ VOID blockTracer(VOID *ip, ADDRINT id)
 
 	if(tracinglevel && lastBB && !inAlloc)
 	{
-		basicBlocks[lastBB].execute(rwAddressLog, shadowMemory, trace);
+		basicBlocks[lastBB].execute(rwContext, shadowMemory, trace);
 		basicBlocks[lastBB].addSuccessors((ADDRINT) ip);
 		if(KnobDebugTrace)
 		{
@@ -687,7 +698,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 										type2 = type2 | WRITE_OPERATOR_TYPE;
 								}
 
-								INS_InsertPredicatedCall(
+								INS_InsertCall(
 									ins, IPOINT_BEFORE, (AFUNPTR)RecordMemReadWrite,
 									IARG_INST_PTR,
 									IARG_MEMORYOP_EA, addr1,
@@ -695,6 +706,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 									IARG_MEMORYOP_EA, addr2,
 									IARG_UINT32, type2,
 									IARG_CALL_ORDER, CALL_ORDER_FIRST,
+									IARG_EXECUTING,
 									IARG_END);
 							}
 							else
@@ -777,7 +789,8 @@ VOID clearState()
 	shadowMemory.clear();
 	
 	lastBB = 0; //this may be the wrong place
-	rwAddressLog.clear();
+	rwContext.addrs.clear();
+	rwContext.pred.clear();
 }
 
 // tracing off
