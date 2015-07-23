@@ -731,7 +731,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 // Malloc Stuff
 VOID MallocBefore(CHAR * name, ADDRINT size, THREADID threadid)
 {
-	inAlloc = true;
+	// inAlloc = true;
 
 	if(KnobSupressMalloc)
 		return;
@@ -742,7 +742,7 @@ VOID MallocBefore(CHAR * name, ADDRINT size, THREADID threadid)
 // Free case
 VOID FreeBefore(CHAR * name, ADDRINT start, THREADID threadid)
 {
-	inAlloc = true;
+	// inAlloc = true;
 
 	if(KnobSupressMalloc)
 		return;
@@ -752,7 +752,7 @@ VOID FreeBefore(CHAR * name, ADDRINT start, THREADID threadid)
 
 VOID FreeAfter()
 {
-	inAlloc = false;
+	// inAlloc = false;
 }
 
 // tracing on
@@ -873,7 +873,7 @@ VOID loopEnd(ADDRINT id)
 
 VOID MallocAfter(ADDRINT ret, THREADID threadid)
 {
-	inAlloc = false;
+	// inAlloc = false;
 
 	if(KnobSupressMalloc)
 		return;
