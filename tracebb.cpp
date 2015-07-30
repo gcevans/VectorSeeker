@@ -152,6 +152,9 @@ void printAddrs(const vector<pair<ADDRINT,UINT32> > &addrs, FILE *out)
 //VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowMemory, FILE *out)
 VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, FILE *out)
 {
+	if(KnobBBSummary)
+		this->execution_count += 1;
+
 	if(instructions.size() == 0) // probably a bare call
 		return;
 
@@ -223,3 +226,68 @@ vector<ADDRINT> BBData::getAddrs()
 	return addrs;
 }
 
+BBData::BBData()
+{
+	execution_count = 0;
+	expected_num_ins = 0;
+}
+
+BBData::~BBData()
+{
+
+}
+
+void BBData::swap(BBData &s)
+{
+	vector<instructionLocationsData> tmp_ins = s.instructions;
+	s.instructions = instructions;
+	instructions = tmp_ins;
+
+	set<ADDRINT>tmp_suc = s.successors;
+	s.successors = successors;
+	successors = tmp_suc;
+	
+	UINT32 tmp_count = s.execution_count;
+	s.execution_count = execution_count;
+	execution_count = tmp_count;
+	
+	USIZE tmp_expect = s.expected_num_ins;
+	s.expected_num_ins = expected_num_ins;
+	expected_num_ins = tmp_expect;
+}
+
+BBData& BBData::operator=(const BBData& s)
+{
+	BBData tmp(s);
+	swap(tmp);
+	return *this;
+}
+
+BBData& BBData::operator=(BBData&& rhs)
+{
+	swap(rhs);
+	return *this;
+}
+
+BBData::BBData(const BBData& s)
+{
+	instructions = s.instructions;
+	successors = s.successors;
+	execution_count = s.execution_count;
+	expected_num_ins = s.expected_num_ins;
+}
+
+int BBData::getNumSuccessors() const
+{
+	return successors.size();
+}
+
+int BBData::getNumInstuructions() const
+{
+	return instructions.size();
+}
+
+int BBData::getNumExecution() const
+{
+	return execution_count;
+}

@@ -43,6 +43,7 @@ END_LEGAL */
 #include <unordered_map>
 #include <stdio.h>
 #include <assert.h>
+#include <climits>
 
 
 #define STATIC_CAST(x,y) ((x) (y))
@@ -195,6 +196,9 @@ KNOB<bool> KnobBBDotLog(KNOB_MODE_WRITEONCE, "pintool",
 
 KNOB<bool> KnobBBReport(KNOB_MODE_WRITEONCE, "pintool",
 	"bb-report", "0",  "Final report on basic blocks");
+
+KNOB<bool> KnobBBSummary(KNOB_MODE_WRITEONCE, "pintool",
+	"bb-summary", "0",  "Summary report on basic blocks");
 
 void buildOutputMaps(vector<instructionLocationsData *> &pmap, map< string,map<int,vector<instructionLocationsData *>>> &lmap)
 {
@@ -415,6 +419,82 @@ void writeBBReport()
 
 }
 
+bool checkvector(BBData bb)
+{
+		vector<ADDRINT> addrs = bb.getAddrs();
+		bool allSingle = true;
+		bool allZero = true;
+		bool someGreater = false;
+		for(auto addr : addrs)
+		{
+			if(!(instructionResults[addr].isSingle() || instructionResults[addr].isZero()))
+				allSingle = false;
+			if(!instructionResults[addr].isZero())
+				allZero = false;
+			if(instructionResults[addr].vectorsGreater(KnobMinVectorCount.Value()))
+				someGreater = true;
+		}
+
+		if(allSingle && !allZero && someGreater)
+		{
+			return true;
+		}
+
+	return false;
+}
+
+void BBSummary()
+{
+	int bbcount = 0;
+	int bbvector = 0;
+	int bbvectorexecutedtotal = 0;
+	int bbexecuted = 0;
+	int bbexecutedtotal = 0;
+	int bbminsize = INT_MAX;
+	int bbmaxsize = 0;
+	int minsuccessors = INT_MAX;
+	int maxsuccessors = 0;
+
+	for(auto bb : basicBlocks)
+	{
+		++bbcount;
+		if(bb.getNumExecution())
+		{
+			++bbexecuted;
+			bbexecutedtotal += bb.getNumExecution();
+
+			if(checkvector(bb))
+			{
+				++bbvector;
+				bbvectorexecutedtotal += bb.getNumExecution();
+			}
+
+			if(bb.getNumInstuructions() < bbminsize)
+				bbminsize = bb.getNumInstuructions();
+
+			if(bb.getNumInstuructions() > bbmaxsize)
+				bbmaxsize = bb.getNumInstuructions();
+
+			if(bb.getNumSuccessors() < minsuccessors )
+				minsuccessors = bb.getNumSuccessors();
+
+			if(bb.getNumSuccessors() > maxsuccessors)
+				maxsuccessors = bb.getNumSuccessors();
+		}
+	}
+
+	fprintf(trace,"Number of different blocks = %d\n", bbcount);
+	fprintf(trace,"Number of different blocks vectorizeable  = %d\n", bbvector);
+	fprintf(trace,"Number of different blocks executed = %d\n", bbexecuted);
+	fprintf(trace,"Number of blocks executed as vector= %d\n", bbvectorexecutedtotal);
+	fprintf(trace,"Number of blocks executed = %d\n", bbexecutedtotal);
+	fprintf(trace,"Smallest Number of instructions in a block = %d\n", bbminsize);
+	fprintf(trace,"Largest Number of instructions in a block = %d\n", bbmaxsize);
+	fprintf(trace,"Smallest Number of succesors in a block = %d\n", minsuccessors);
+	fprintf(trace,"Largest Number of succesors in a block = %d\n", maxsuccessors);
+
+}
+
 // This function is called when the application exits
 VOID Fini(INT32 code, VOID *v)
 {
@@ -440,6 +520,11 @@ VOID Fini(INT32 code, VOID *v)
 		fprintf(trace, "#Start Summary\n");
 		fprintf(trace, "#Total Instructions (No Vector Instructions) = %u\n", instructionCount);
 		fprintf(trace, "#Total Instructions (Vector Instructions) = %u\n", instructionCount - vectorInstructionCountSavings);
+	}
+
+	if(KnobBBSummary)
+	{
+		BBSummary();
 	}
 
 	// print basic block info

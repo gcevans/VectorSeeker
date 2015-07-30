@@ -9,6 +9,7 @@
 extern KNOB<bool> KnobDebugTrace;
 extern KNOB<bool> KnobSkipMove;
 extern KNOB<bool> KnobBBVerstion;
+extern KNOB<bool> KnobBBSummary;
 
 extern unordered_map<ADDRINT, ResultVector> instructionResults;
 extern unordered_map<ADDRINT, instructionDebugData> debugData;
