@@ -260,7 +260,11 @@ instructionType decodeInstructionData(ADDRINT ip, unordered_map<ADDRINT,instruct
 }
 
 // Standard form of instruction tracing for debugging
+#ifdef NOSHAODWCACHE
+void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemoryNoCache &shadowMemory )
+#else
 void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemory &shadowMemory )
+#endif
 {
 	xed_state_t dstate;
 	xed_state_zero(&dstate);

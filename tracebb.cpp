@@ -6,7 +6,11 @@
 
 extern unsigned instructionCount;
 
+#ifdef NOSHAODWCACHE
+VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemoryNoCache &shadowMemory, FILE *out)
+#else
 VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowMemory, FILE *out)
+#endif
 {
 	++instructionCount;
 		
@@ -35,7 +39,11 @@ VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowM
 		instructionTracing((VOID *)ins.ip,NULL,value,"Base",out,shadowMemory);
 }
 
+#ifdef NOSHAODWCACHE
+VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UINT32>&one, const pair<ADDRINT,UINT32>&two, ShadowMemoryNoCache &shadowMemory, FILE *out)
+#else
 VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UINT32>&one, const pair<ADDRINT,UINT32>&two, ShadowMemory &shadowMemory, FILE *out)
+#endif
 {
 
 
@@ -149,8 +157,11 @@ void printAddrs(const vector<pair<ADDRINT,UINT32> > &addrs, FILE *out)
 	fprintf(out, "\n");
 }
 
-//VOID BBData::execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowMemory, FILE *out)
+#ifdef NOSHAODWCACHE
+VOID BBData::execute(ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, FILE *out)
+#else
 VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, FILE *out)
+#endif
 {
 	if(KnobBBSummary)
 		this->execution_count += 1;

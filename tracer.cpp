@@ -70,7 +70,11 @@ unsigned instructionCount;
 unsigned tracinglevel;
 int InTraceFunction;
 
+#ifdef NOSHAODWCACHE
+ShadowMemoryNoCache shadowMemory;
+#else
 ShadowMemory shadowMemory;
+#endif
 
 unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
 unordered_map<ADDRINT, instructionDebugData> debugData;
@@ -221,7 +225,13 @@ VOID writeLog()
 	vector<instructionLocationsData *> *current_line; // instructions in the current line
 
 	if(!KnobForFrontend)
+	{
+		#ifdef NOSHAODWCACHE
+		fprintf(trace, "#start instruction log NO SHADOWCACHE\b");
+		#else
 		fprintf(trace, "#start instruction log\n");
+		#endif
+	}
 
 	buildOutputMaps(profile_list,line_map);
 

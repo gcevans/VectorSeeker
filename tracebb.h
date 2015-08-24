@@ -36,8 +36,11 @@ public:
 	void swap(BBData &s);
 	VOID pushInstruction(instructionLocationsData ins);
 	VOID printBlock(FILE *out);
-	// VOID execute(vector<pair<ADDRINT,UINT32> > &addrs, ShadowMemory &shadowMemory, FILE *out);
+#ifdef NOSHAODWCACHE
+	VOID execute(ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, FILE *out);
+#else
 	VOID execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, FILE *out);
+#endif
 	VOID addSuccessors(ADDRINT successor);
 	vector<ADDRINT> getAddrs();
 	int getNumSuccessors() const;
