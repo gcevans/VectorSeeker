@@ -13,5 +13,6 @@ extern KNOB<bool> KnobBBSummary;
 
 extern unordered_map<ADDRINT, ResultVector> instructionResults;
 extern unordered_map<ADDRINT, instructionDebugData> debugData;
+extern PIN_LOCK lock;
 
 #endif

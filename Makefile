@@ -74,6 +74,9 @@ runtest : tracer.so mintest
 rundeeploops : tracer.so deeploops
 	setarch `uname -m` -R $(PINPATH)/pin.sh -injection child -t tracer.so -o deeploops.log -- ./deeploops
 
+rundeepbbloops : tracer.so deeploops
+	setarch `uname -m` -R $(PINPATH)/pin.sh -injection child -t tracer.so -o deeploops.log -bb -- ./deeploops
+
 clean :
 	rm -f *.o *.so mintest mintest.log deeploops deeploops.log deeploops-sol deeploops-sol.log mintest-nodebug
 	

@@ -93,7 +93,6 @@ list<long long> loopStack;
 vector<BBData> basicBlocks;
 BBData empty;
 // vector<pair<ADDRINT,UINT32> > rwAddressLog;
-ExecutionContex rwContext;
 size_t lastBB;
 size_t UBBID;
 
@@ -101,18 +100,20 @@ size_t UBBID;
 FILE *bbl_log;
 
 // Local Functions
-VOID clearState();
+VOID clearState(THREADID threadid);
 
 // TLS globals
 static  TLS_KEY tls_key;
 PIN_LOCK lock;
-INT32 numThreads = 0;
+THREADID numThreads = 0;
 
 class thread_data_t
 {
 public:
 	size_t malloc_size;
-	UINT8 pad[64-sizeof(ADDRINT)];
+		// UINT8 pad[64-sizeof(ADDRINT)];
+	size_t lastBB;
+	ExecutionContex rwContext;
 };
 
 // function to access thread-specific data
@@ -554,8 +555,10 @@ VOID Fini(INT32 code, VOID *v)
 	fclose(trace);
 }
 
-VOID recoredBaseInst(VOID *ip)
+VOID recoredBaseInst(VOID *ip, THREADID threadid)
 {
+	assert(threadid <= numThreads);
+
 	if(tracinglevel == 0 || inAlloc)
 		return;
 
@@ -596,7 +599,7 @@ const UINT32 READ_OPERATOR_TYPE = 1;
 const UINT32 WRITE_OPERATOR_TYPE = 2;
 const UINT32 BOTH_OPERATOR_TYPE = 3;
 
-VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t2, bool pred)
+VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t2, THREADID threadid, bool pred)
 {
 	UINT32 type1 = t1;
 	UINT32 type2 = t2;
@@ -606,9 +609,12 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 	if(KnobBBVerstion)
 	{
-		rwContext.addrs.push_back( make_pair((ADDRINT) addr1, t1) );
-		rwContext.addrs.push_back( make_pair((ADDRINT) addr2, t2) );
-		rwContext.pred.push_back(pred);
+		assert(threadid <= numThreads);
+		thread_data_t *tdata = get_tls(threadid);
+	    assert(tdata != nullptr);
+		tdata->rwContext.addrs.push_back( make_pair((ADDRINT) addr1, t1) );
+		tdata->rwContext.addrs.push_back( make_pair((ADDRINT) addr2, t2) );
+		tdata->rwContext.pred.push_back(pred);
 		if(KnobDebugTrace)
 			fprintf(trace,"%p:<%p,%u><%p,%u>\n", (void*) ip, addr1, type1, addr2, type2);
 		return;
@@ -692,22 +698,26 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	}
 }
 
-VOID blockTracer(VOID *ip, ADDRINT id)
+VOID blockTracer(VOID *ip, ADDRINT id, THREADID threadid)
 {
 	if(!KnobBBVerstion)
 		return;
 
-	if(tracinglevel && lastBB && !inAlloc)
+	assert(threadid <= numThreads);
+	thread_data_t *tdata = get_tls(threadid);
+    assert(tdata != nullptr);
+
+	if(tracinglevel && tdata->lastBB && !inAlloc)
 	{
-		basicBlocks[lastBB].execute(rwContext, shadowMemory, trace);
-		basicBlocks[lastBB].addSuccessors((ADDRINT) ip);
+		basicBlocks[tdata->lastBB].execute(tdata->rwContext, shadowMemory, trace);
+		basicBlocks[tdata->lastBB].addSuccessors((ADDRINT) ip);
 		if(KnobDebugTrace)
 		{
 			fprintf(trace, "BBL %p executed\n", (void *) lastBB);
-			basicBlocks[lastBB].printBlock(trace);
+			basicBlocks[tdata->lastBB].printBlock(trace);
 		}
 	}
-	lastBB = id;
+	tdata->lastBB = id;
 }
 
 
@@ -739,7 +749,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 	    			{
 		    			logBasicBlock(bbl, UBBID);
 	    			}
-		    		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)blockTracer, IARG_INST_PTR, IARG_ADDRINT, UBBID, IARG_CALL_ORDER, CALL_ORDER_FIRST-5, IARG_END);
+		    		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)blockTracer, IARG_INST_PTR, IARG_ADDRINT, UBBID, IARG_THREAD_ID, IARG_CALL_ORDER, CALL_ORDER_FIRST-5, IARG_END);
 		    		basicBlocks[UBBID].expected_num_ins = BBL_NumIns(bbl);
 		    		// insturment each instruction in the curent basic block
 			    	for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins) )
@@ -769,7 +779,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 							if(memOperands == 0)
 							{
 								if(!KnobBBVerstion)
-									INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)recoredBaseInst, IARG_INST_PTR, IARG_CALL_ORDER, CALL_ORDER_FIRST, IARG_END);
+									INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)recoredBaseInst, IARG_INST_PTR, IARG_CALL_ORDER, CALL_ORDER_FIRST, IARG_THREAD_ID, IARG_END);
 							}
 							else if( memOperands < 3)
 							{
@@ -800,6 +810,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 									IARG_UINT32, type1,
 									IARG_MEMORYOP_EA, addr2,
 									IARG_UINT32, type2,
+									IARG_THREAD_ID,
 									IARG_CALL_ORDER, CALL_ORDER_FIRST,
 									IARG_EXECUTING,
 									IARG_END);
@@ -830,6 +841,8 @@ VOID MallocBefore(CHAR * name, ADDRINT size, THREADID threadid)
 
 	if(KnobSupressMalloc)
 		return;
+
+	assert(threadid <= numThreads);
 	thread_data_t* tdata = get_tls(threadid);
 	tdata->malloc_size = size;
 }
@@ -861,7 +874,7 @@ VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
 		traceRegionCount++;
 	}
 	if(tracinglevel == 0)
-		clearState();
+		clearState(threadid);
 
 	tracinglevel++;
 	if(!KnobForFrontend)
@@ -878,14 +891,15 @@ void clearVectors()
 }
 
 // Clear state to just initialized vectors
-VOID clearState()
+VOID clearState(THREADID threadid)
 {
 	clearVectors();
 	shadowMemory.clear();
 	
-	lastBB = 0; //this may be the wrong place
-	rwContext.addrs.clear();
-	rwContext.pred.clear();
+	thread_data_t *tdata = get_tls(threadid);
+	tdata->lastBB = 0; //this may be the wrong place
+	tdata->rwContext.addrs.clear();
+	tdata->rwContext.pred.clear();
 }
 
 // tracing off
@@ -904,7 +918,7 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 	}
 	else if(tracinglevel == 1)
 	{
-		blockTracer(NULL, 0); // trace final block
+		blockTracer(NULL, 0,0 ); // trace final block
 		shadowMemory.clear();
 		if(KnobVectorLineSummary)
 		{
@@ -973,6 +987,7 @@ VOID MallocAfter(ADDRINT ret, THREADID threadid)
 	if(KnobSupressMalloc)
 		return;
 	
+	assert(threadid <= numThreads);
 	thread_data_t* tdata = get_tls(threadid);
 		
 	//Map version
@@ -1117,6 +1132,9 @@ VOID ThreadStart(THREADID threadid, CONTEXT *ctxt, INT32 flags, VOID *v)
     PIN_ReleaseLock(&lock);
 
     thread_data_t* tdata = new thread_data_t;
+    tdata->lastBB = 0;
+
+    assert(tdata != nullptr);
 
     PIN_SetThreadData(tls_key, tdata, threadid);
 }
@@ -1161,7 +1179,8 @@ int main(int argc, char * argv[])
 #ifdef LOOPSTACK
 	loopStack.push_front(-1);
 #endif
-	clearState();
+	clearVectors();
+	shadowMemory.clear();
 
     // Initialize the lock
     PIN_InitLock(&lock);
