@@ -93,7 +93,6 @@ list<long long> loopStack;
 vector<BBData> basicBlocks;
 BBData empty;
 // vector<pair<ADDRINT,UINT32> > rwAddressLog;
-size_t lastBB;
 size_t UBBID;
 
 // BBL Debug Globals
@@ -713,7 +712,7 @@ VOID blockTracer(VOID *ip, ADDRINT id, THREADID threadid)
 		basicBlocks[tdata->lastBB].addSuccessors((ADDRINT) ip);
 		if(KnobDebugTrace)
 		{
-			fprintf(trace, "BBL %p executed\n", (void *) lastBB);
+			fprintf(trace, "BBL %p executed\n", (void *) tdata->lastBB);
 			basicBlocks[tdata->lastBB].printBlock(trace);
 		}
 	}
