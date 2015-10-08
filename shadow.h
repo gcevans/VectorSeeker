@@ -34,6 +34,8 @@ private:
 	long shadowRegisters[XED_REG_LAST]; // Register Memory
 	unordered_map<ADDRINT,CacheLine> cacheShadowMemory;
 	map<ADDRINT,size_t> allocationMap;
+	PIN_RWMUTEX	lock;
+	void writeMemUnlocked(ADDRINT address, long depth);
 
 public:
 	//Access Memory
@@ -54,6 +56,13 @@ public:
 	bool memIsArray(VOID *addr);
 	//Print allocation map
 	void printAllocationMap(FILE *out);
+	//
+	ShadowMemory();
+	ShadowMemory(const ShadowMemory &s);
+	~ShadowMemory();
+	ShadowMemory& operator=(const ShadowMemory& s);
+	ShadowMemory& operator=(ShadowMemory&& rhs);
+	void swap(ShadowMemory &s);
 };
 
 class ShadowMemoryNoCache

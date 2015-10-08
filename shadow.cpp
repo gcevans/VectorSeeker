@@ -1,5 +1,6 @@
 
 #include "shadow.h"
+#include "tracer.h"
 
 #include <assert.h>
 
@@ -184,30 +185,51 @@ void CacheLine::write(unsigned int offset,long depth)
 //Access Memory
 long ShadowMemory::readMem(ADDRINT address)
 {
-	return cacheShadowMemory[address/cacheLineSize].read(address%cacheLineSize);
+	long value = 0;
+	PIN_RWMutexReadLock(&lock);
+	auto itr = cacheShadowMemory.find(address/cacheLineSize);
+	if(itr != cacheShadowMemory.end())
+	{
+	    value = itr->second.read(address%cacheLineSize);		
+	}
+    PIN_RWMutexUnlock(&lock);
+	return value;
 };
 
 //Access Register
 long ShadowMemory::readReg(size_t reg)
 {
-	return shadowRegisters[reg];	
+	PIN_RWMutexReadLock(&lock);
+	long value = shadowRegisters[reg];
+    PIN_RWMutexUnlock(&lock);
+	return value;	
 };
 
 //Set Memory
 void ShadowMemory::writeMem(ADDRINT address, long depth)
 {
-	cacheShadowMemory[address/cacheLineSize].write(address%cacheLineSize, depth);
+	PIN_RWMutexWriteLock(&lock);
+	this->writeMemUnlocked(address, depth);
+    PIN_RWMutexUnlock(&lock);
 };
+
+void ShadowMemory::writeMemUnlocked(ADDRINT address, long depth)
+{
+	cacheShadowMemory[address/cacheLineSize].write(address%cacheLineSize, depth);	
+}
 
 //Set Register
 void ShadowMemory::writeReg(size_t reg, long depth)
 {
+	PIN_RWMutexWriteLock(&lock);
 	shadowRegisters[reg] = depth;
+    PIN_RWMutexUnlock(&lock);
 };
 
 //Clear
 void ShadowMemory::clear()
 {
+	PIN_RWMutexWriteLock(&lock);
 	for(int i = 0; i < XED_REG_LAST; i++)
 	{
 		shadowRegisters[i] = 0;
@@ -219,41 +241,52 @@ void ShadowMemory::clear()
 	{
 		size_t start = it->first;
 		for(size_t i = 0; i < allocationMap[start]; i++)
-			this->writeMem(start+i, 1);
+			this->writeMemUnlocked(start+i, 1);
 	}
 
+    PIN_RWMutexUnlock(&lock);
 };
 
 void ShadowMemory::arrayMem(ADDRINT start, size_t size,bool tracinglevel)
 {
+	PIN_RWMutexWriteLock(&lock);
 	if(size > 0)
 		allocationMap[start] = size;
 	
 	if(tracinglevel)
 		for(size_t i = 0; i < size; i++)
-			this->writeMem(start+i, 1);
+			this->writeMemUnlocked(start+i, 1);
+
+    PIN_RWMutexUnlock(&lock);
 }
 
 void ShadowMemory::arrayMemClear(ADDRINT start)
 {
+	PIN_RWMutexWriteLock(&lock);
 	for(size_t i = 0; i < allocationMap[start]; i++)
-		this->writeMem(start+i, 0);
+		this->writeMemUnlocked(start+i, 0);
 	
 	allocationMap.erase(start);
+    PIN_RWMutexUnlock(&lock);
 }
 
 bool ShadowMemory::memIsArray(VOID *addr)
 {
+	bool isArray = false;
+	PIN_RWMutexReadLock(&lock);
 	auto it = allocationMap.upper_bound((size_t) addr);
 
-	if(it != allocationMap.end())
+	if(it != allocationMap.end() && !isArray)
 	{
 		--it;
 		if(((size_t)(*it).first + (*it).second > (size_t)addr))
-			return true;
+		{
+			isArray = true;
+		}
 	}
+    PIN_RWMutexUnlock(&lock);
 
-	return false;
+	return isArray;
 
 	// for(auto it = allocationMap.begin(); it != allocationMap.end(); it++)
 	// {
@@ -268,12 +301,39 @@ bool ShadowMemory::memIsArray(VOID *addr)
 
 void ShadowMemory::printAllocationMap(FILE *out)
 {
+	PIN_RWMutexReadLock(&lock);
 	for(auto a : allocationMap)
 	{
 		fprintf(out, "[%p,%p]", (void*) a.first, (void *)(a.first + a.second));
 	}
 	fprintf(out, "\n");
+    PIN_RWMutexUnlock(&lock);
 }
 
+
+ShadowMemory::ShadowMemory()
+{
+	assert(PIN_RWMutexInit(&lock));
+}
+ShadowMemory::ShadowMemory(const ShadowMemory &s)
+{
+	assert(false);
+}
+ShadowMemory::~ShadowMemory()
+{
+	assert(false);
+}
+ShadowMemory& ShadowMemory::operator=(const ShadowMemory& s)
+{
+	assert(false);
+}
+ShadowMemory& ShadowMemory::operator=(ShadowMemory&& rhs)
+{
+	assert(false);
+}
+void ShadowMemory::swap(ShadowMemory &s)
+{
+	assert(false);
+}
 
 
