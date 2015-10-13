@@ -261,9 +261,9 @@ instructionType decodeInstructionData(ADDRINT ip, unordered_map<ADDRINT,instruct
 
 // Standard form of instruction tracing for debugging
 #ifdef NOSHAODWCACHE
-void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemoryNoCache &shadowMemory )
+void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers)
 #else
-void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemory &shadowMemory )
+void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemory &shadowMemory, ShadowRegisters &registers)
 #endif
 {
 	xed_state_t dstate;
@@ -296,9 +296,9 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 			if(xed_decoded_inst_get_reg(&ins, xed_operand_name(curOp)))
 			{
 				xed_reg_enum_t r = xed_decoded_inst_get_reg(&ins, op_name);
-				fprintf(out,"r:%s=%ld ",xed_reg_enum_t2str(r),shadowMemory.readReg(r));
+				fprintf(out,"r:%s=%ld ",xed_reg_enum_t2str(r),registers.readReg(r));
 				if(r != XED_REG_CR0)
-					value = max(shadowMemory.readReg(r),value);
+					value = max(registers.readReg(r),value);
 			}
 			else
 			{
@@ -311,9 +311,9 @@ void instructionTracing(VOID * ip, VOID * addr, long int value, const char *call
 			if(xed_decoded_inst_get_reg(&ins, xed_operand_name(curOp)))
 			{
 				xed_reg_enum_t r = xed_decoded_inst_get_reg(&ins, op_name);
-				fprintf(out,"w:%s=%ld ",xed_reg_enum_t2str(r),shadowMemory.readReg(r));
+				fprintf(out,"w:%s=%ld ",xed_reg_enum_t2str(r),registers.readReg(r));
 				if(r != XED_REG_CR0)
-					value = max(shadowMemory.readReg(r),value);
+					value = max(registers.readReg(r),value);
 			}
 			else
 			{

@@ -42,12 +42,8 @@ private:
 public:
 	//Access Memory
 	long readMem(ADDRINT address);
-	//Access Register
-	long readReg(size_t reg);
 	//Set Memory
 	void writeMem(ADDRINT address, long depth);
-	//Set Register
-	void writeReg(size_t reg, long depth);	
 	//Clear
 	void clear();
 	//Add Memory Allocation
@@ -67,6 +63,17 @@ public:
 	void swap(ShadowMemory &s);
 };
 
+class ShadowRegisters
+{
+private:
+	long shadowRegisters[XED_REG_LAST]; // Register Memory
+public:	
+	//Access Register
+	long readReg(size_t reg);
+	//Set Register
+	void writeReg(size_t reg, long depth);	
+};
+
 class ShadowMemoryNoCache
 {
 	long shadowRegisters[XED_REG_LAST]; // Register Memory
@@ -79,21 +86,11 @@ public:
 	{
 		return shadowMemory[address];
 	};
-	//Access Register
-	long readReg(size_t reg)
-	{
-		return shadowRegisters[reg];
-	};
 	//Set Memory
 	void writeMem(ADDRINT address, long depth)
 	{
 		shadowMemory[address] = depth;
 	}
-	//Set Register
-	void writeReg(size_t reg, long depth)
-	{
-		shadowRegisters[reg] = depth;
-	};
 	//Clear
 	void clear()
 	{

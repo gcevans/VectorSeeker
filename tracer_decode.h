@@ -10,9 +10,9 @@ instructionType decodeInstructionData(ADDRINT ip, unordered_map<ADDRINT,instruct
 
 //Decode Instructions for debug tracing
 #ifdef NOSHAODWCACHE
-void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemoryNoCache &shadowMemory);
+void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers);
 #else
-void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemory &shadowMemory);
+void instructionTracing(VOID * ip, VOID * addr, long int value, const char *called_from, FILE *out, ShadowMemory &shadowMemory, ShadowRegisters &registers);
 #endif
 
 //Get Instruction Class String

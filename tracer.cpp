@@ -115,6 +115,7 @@ public:
 		// UINT8 pad[64-sizeof(ADDRINT)];
 	size_t lastBB;
 	ExecutionContex rwContext;
+	ShadowRegisters registers;
 };
 
 #ifndef THREADSAFE
@@ -562,7 +563,11 @@ VOID Fini(INT32 code, VOID *v)
 
 VOID recoredBaseInst(VOID *ip, THREADID threadid)
 {
+	#ifdef THREADSAFE
 	assert(threadid <= numThreads);
+	thread_data_t *tdata = get_tls(threadid);
+    assert(tdata != nullptr);
+    #endif
 
 	if(tracinglevel == 0 || inAlloc)
 		return;
@@ -574,7 +579,7 @@ VOID recoredBaseInst(VOID *ip, THREADID threadid)
 	
 	for(unsigned int i = 0; i < current_instruction->registers_read.size(); i++)
 	{
-		value = max(shadowMemory.readReg(current_instruction->registers_read[i]),value);
+		value = max(tdata->registers.readReg(current_instruction->registers_read[i]),value);
 	}
 	
 	if(value > 0 && (current_instruction->type != MOVEONLY_INS_TYPE))
@@ -584,7 +589,7 @@ VOID recoredBaseInst(VOID *ip, THREADID threadid)
 
 	for(unsigned int i = 0; i < current_instruction->registers_written.size(); i++)
 	{
-		shadowMemory.writeReg(current_instruction->registers_written[i], value);
+		tdata->registers.writeReg(current_instruction->registers_written[i], value);
 	}
 	
 	if(value > 0 && (!((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
@@ -596,7 +601,7 @@ VOID recoredBaseInst(VOID *ip, THREADID threadid)
 	}
 
 	if(KnobDebugTrace)
-		instructionTracing(ip,NULL,value,"Base",trace,shadowMemory);
+		instructionTracing(ip,NULL,value,"Base",trace,shadowMemory,tdata->registers);
 }
 
 const UINT32 NONE_OPERATOR_TYPE = 0;
@@ -612,13 +617,14 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	if(tracinglevel == 0 || inAlloc)
 		return;
 
+	#ifdef THREADSAFE
+	assert(threadid <= numThreads);
+	thread_data_t *tdata = get_tls(threadid);
+    assert(tdata != nullptr);
+    #endif
+
 	if(KnobBBVerstion)
 	{
-		#ifdef THREADSAFE
-		assert(threadid <= numThreads);
-		thread_data_t *tdata = get_tls(threadid);
-	    assert(tdata != nullptr);
-	    #endif
 		tdata->rwContext.addrs.push_back( make_pair((ADDRINT) addr1, t1) );
 		tdata->rwContext.addrs.push_back( make_pair((ADDRINT) addr2, t2) );
 		tdata->rwContext.pred.push_back(pred);
@@ -653,7 +659,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 	for(unsigned int i = 0; i < current_instruction->registers_read.size(); i++)
 	{
-		value = max(shadowMemory.readReg(current_instruction->registers_read[i]),value);
+		value = max(tdata->registers.readReg(current_instruction->registers_read[i]),value);
 	}
 		
 	if(value > 0 && (current_instruction->type != MOVEONLY_INS_TYPE))
@@ -663,7 +669,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 	for(unsigned int i = 0; i < current_instruction->registers_written.size(); i++)
 	{
-		shadowMemory.writeReg(current_instruction->registers_written[i], value);
+		tdata->registers.writeReg(current_instruction->registers_written[i], value);
 	}
 	
 	long region1 = 0;
@@ -700,7 +706,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 	if(KnobDebugTrace)
 	{
-		instructionTracing(ip,addr2,value,"Mem",trace, shadowMemory);
+		instructionTracing(ip,addr2,value,"Mem",trace, shadowMemory, tdata->registers);
 		fprintf(trace,"<%p,%u><%p,%u>", addr1, type1, addr2, type2);
 	}
 }
@@ -718,7 +724,7 @@ VOID blockTracer(VOID *ip, ADDRINT id, THREADID threadid)
 
 	if(tracinglevel && tdata->lastBB && !inAlloc)
 	{
-		basicBlocks[tdata->lastBB].execute(tdata->rwContext, shadowMemory, trace);
+		basicBlocks[tdata->lastBB].execute(tdata->rwContext, shadowMemory, tdata->registers, trace);
 		basicBlocks[tdata->lastBB].addSuccessors((ADDRINT) ip);
 		if(KnobDebugTrace)
 		{
@@ -877,6 +883,10 @@ VOID FreeAfter()
 // tracing on
 VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
 {
+	#ifdef THREADSAFE
+	PIN_GetLock(&lock,threadid);
+	#endif
+
 	if(traceRegionCount > KnobTraceLimit.Value())
 		return;
 
@@ -890,6 +900,10 @@ VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
 	tracinglevel++;
 	if(!KnobForFrontend)
 	    fprintf(trace,"tracing turned on\n");
+ 
+    #ifdef THREADSAFE
+	PIN_ReleaseLock(&lock);
+    #endif
 }
 
 void clearVectors()
@@ -918,8 +932,17 @@ VOID clearState(THREADID threadid)
 // tracing off
 VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 {
+	#ifdef THREADSAFE
+    PIN_GetLock(&lock, threadid+1);
+    #endif
+
 	if(traceRegionCount > KnobTraceLimit.Value())
+	{	
+	    #ifdef THREADSAFE
+		PIN_ReleaseLock(&lock);
+	    #endif
 		return;
+	}
 
 	if(!KnobForFrontend)
 	    fprintf(trace,"tracing turned off\n");
@@ -951,6 +974,9 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 	{
 		tracinglevel--;
 	}
+    #ifdef THREADSAFE
+	PIN_ReleaseLock(&lock);
+    #endif
 }
 
 VOID traceFunctionEntry(CHAR * name, ADDRINT start, THREADID threadid)

@@ -37,9 +37,9 @@ public:
 	VOID pushInstruction(instructionLocationsData ins);
 	VOID printBlock(FILE *out);
 #ifdef NOSHAODWCACHE
-	VOID execute(ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, FILE *out);
+	VOID execute(ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers, FILE *out);
 #else
-	VOID execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, FILE *out);
+	VOID execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, ShadowRegisters &registers, FILE *out);
 #endif
 	VOID addSuccessors(ADDRINT successor);
 	vector<ADDRINT> getAddrs();

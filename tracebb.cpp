@@ -7,9 +7,9 @@
 extern unsigned instructionCount;
 
 #ifdef NOSHAODWCACHE
-VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemoryNoCache &shadowMemory, FILE *out)
+VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers, FILE *out)
 #else
-VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowMemory, FILE *out)
+VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowMemory, ShadowRegisters &registers, FILE *out)
 #endif
 {
 	++instructionCount;
@@ -17,7 +17,7 @@ VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowM
 	long value = 0;
 	for(auto reg : ins.registers_read)
 	{
-		value = max(shadowMemory.readReg(reg),value);
+		value = max(registers.readReg(reg),value);
 	}
 	
 	if(value > 0 && (ins.type != MOVEONLY_INS_TYPE))
@@ -27,7 +27,7 @@ VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowM
 
 	for(auto reg : ins.registers_written)
 	{
-		shadowMemory.writeReg(reg, value);
+		registers.writeReg(reg, value);
 	}
 	
 	if(value > 0 && (!((ins.type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
@@ -36,13 +36,13 @@ VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowM
 	}
 	
 	if(KnobDebugTrace)
-		instructionTracing((VOID *)ins.ip,NULL,value,"Base",out,shadowMemory);
+		instructionTracing((VOID *)ins.ip,NULL,value,"Base",out,shadowMemory, registers);
 }
 
 #ifdef NOSHAODWCACHE
-VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UINT32>&one, const pair<ADDRINT,UINT32>&two, ShadowMemoryNoCache &shadowMemory, FILE *out)
+VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UINT32>&one, const pair<ADDRINT,UINT32>&two, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers, FILE *out)
 #else
-VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UINT32>&one, const pair<ADDRINT,UINT32>&two, ShadowMemory &shadowMemory, FILE *out)
+VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UINT32>&one, const pair<ADDRINT,UINT32>&two, ShadowMemory &shadowMemory, ShadowRegisters &registers, FILE *out)
 #endif
 {
 
@@ -68,7 +68,7 @@ VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UIN
 
 	for(unsigned int i = 0; i < ins.registers_read.size(); i++)
 	{
-		value = max(shadowMemory.readReg(ins.registers_read[i]),value);
+		value = max(registers.readReg(ins.registers_read[i]),value);
 	}
 		
 	if(value > 0 && (ins.type != MOVEONLY_INS_TYPE))
@@ -78,7 +78,7 @@ VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UIN
 
 	for(unsigned int i = 0; i < ins.registers_written.size(); i++)
 	{
-		shadowMemory.writeReg(ins.registers_written[i], value);
+		registers.writeReg(ins.registers_written[i], value);
 	}
 	
 	long region1 = 0;
@@ -112,7 +112,7 @@ VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UIN
 
 	if(KnobDebugTrace)
 	{
-		instructionTracing(ip,addr2,value,"Mem",out, shadowMemory);
+		instructionTracing(ip,addr2,value,"Mem",out, shadowMemory, registers);
 		fprintf(out,"<%p,%u><%p,%u>\n", addr1, type1, addr2, type2);
 	}
 
@@ -158,9 +158,9 @@ void printAddrs(const vector<pair<ADDRINT,UINT32> > &addrs, FILE *out)
 }
 
 #ifdef NOSHAODWCACHE
-VOID BBData::execute(ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, FILE *out)
+VOID BBData::execute(ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, ShadowRegisters registers, FILE *out)
 #else
-VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, FILE *out)
+VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, ShadowRegisters &registers, FILE *out)
 #endif
 {
 	if(KnobBBSummary)
@@ -181,12 +181,12 @@ VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, FILE
 		// execute instruction
 		if(instructions[i].type == X87_INS_TYPE)
 		{
-			instructionTracing((VOID *) instructions[i].ip, NULL, 0, "x87error", out, shadowMemory);
+			instructionTracing((VOID *) instructions[i].ip, NULL, 0, "x87error", out, shadowMemory, registers);
 		}
 
 		if(instructions[i].memOperands == 0)
 		{
-			handleBaseInstBB(instructions[i], shadowMemory, out);
+			handleBaseInstBB(instructions[i], shadowMemory, registers, out);
 		}
 		else if(instructions[i].memOperands < 3)
 		{
@@ -203,13 +203,13 @@ VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, FILE
 			}
 
 			if(contexts.pred[memOpsCount/2])
-				handleMemInstBB(instructions[i], contexts.addrs[memOpsCount], contexts.addrs[memOpsCount+1], shadowMemory, out);
+				handleMemInstBB(instructions[i], contexts.addrs[memOpsCount], contexts.addrs[memOpsCount+1], shadowMemory, registers, out);
 	
 			memOpsCount += 2;
 		}
 		else
 		{
-			instructionTracing((VOID *) instructions[i].ip,NULL,0,"unhandledMemOp",out, shadowMemory);
+			instructionTracing((VOID *) instructions[i].ip,NULL,0,"unhandledMemOp",out, shadowMemory, registers);
 		}
 	}
 	if(KnobDebugTrace)

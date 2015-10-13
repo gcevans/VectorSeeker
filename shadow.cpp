@@ -200,19 +200,6 @@ long ShadowMemory::readMem(ADDRINT address)
 	return value;
 };
 
-//Access Register
-long ShadowMemory::readReg(size_t reg)
-{
-	#ifdef THREADSAFE
-	PIN_RWMutexReadLock(&lock);
-	#endif
-	long value = shadowRegisters[reg];
-	#ifdef THREADSAFE
-    PIN_RWMutexUnlock(&lock);
-    #endif
-	return value;	
-};
-
 //Set Memory
 void ShadowMemory::writeMem(ADDRINT address, long depth)
 {
@@ -229,18 +216,6 @@ void ShadowMemory::writeMemUnlocked(ADDRINT address, long depth)
 {
 	cacheShadowMemory[address/cacheLineSize].write(address%cacheLineSize, depth);	
 }
-
-//Set Register
-void ShadowMemory::writeReg(size_t reg, long depth)
-{
-	#ifdef THREADSAFE
-	PIN_RWMutexWriteLock(&lock);
-	#endif
-	shadowRegisters[reg] = depth;
-	#ifdef THREADSAFE
-    PIN_RWMutexUnlock(&lock);
-    #endif
-};
 
 //Clear
 void ShadowMemory::clear()
@@ -374,4 +349,16 @@ void ShadowMemory::swap(ShadowMemory &s)
 	assert(false);
 }
 
+//Access Register
+long ShadowRegisters::readReg(size_t reg)
+{
+	long value = shadowRegisters[reg];
+	return value;	
+};
+
+//Set Register
+void ShadowRegisters::writeReg(size_t reg, long depth)
+{
+	shadowRegisters[reg] = depth;
+};
 
