@@ -103,7 +103,9 @@ VOID clearState(THREADID threadid);
 
 // TLS globals
 static  TLS_KEY tls_key;
+#ifdef THREADSAFE
 PIN_LOCK lock;
+#endif
 THREADID numThreads = 0;
 
 class thread_data_t
@@ -114,6 +116,10 @@ public:
 	size_t lastBB;
 	ExecutionContex rwContext;
 };
+
+#ifndef THREADSAFE
+thread_data_t *tdata;
+#endif
 
 // function to access thread-specific data
 thread_data_t* get_tls(THREADID threadid)
@@ -608,9 +614,11 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 	if(KnobBBVerstion)
 	{
+		#ifdef THREADSAFE
 		assert(threadid <= numThreads);
 		thread_data_t *tdata = get_tls(threadid);
 	    assert(tdata != nullptr);
+	    #endif
 		tdata->rwContext.addrs.push_back( make_pair((ADDRINT) addr1, t1) );
 		tdata->rwContext.addrs.push_back( make_pair((ADDRINT) addr2, t2) );
 		tdata->rwContext.pred.push_back(pred);
@@ -702,9 +710,11 @@ VOID blockTracer(VOID *ip, ADDRINT id, THREADID threadid)
 	if(!KnobBBVerstion)
 		return;
 
+	#ifdef THREADSAFE
 	assert(threadid <= numThreads);
 	thread_data_t *tdata = get_tls(threadid);
     assert(tdata != nullptr);
+    #endif
 
 	if(tracinglevel && tdata->lastBB && !inAlloc)
 	{
@@ -841,8 +851,10 @@ VOID MallocBefore(CHAR * name, ADDRINT size, THREADID threadid)
 	if(KnobSupressMalloc)
 		return;
 
+	#ifdef THREADSAFE
 	assert(threadid <= numThreads);
 	thread_data_t* tdata = get_tls(threadid);
+	#endif
 	tdata->malloc_size = size;
 }
 
@@ -895,7 +907,9 @@ VOID clearState(THREADID threadid)
 	clearVectors();
 	shadowMemory.clear();
 	
+	#ifdef THREADSAFE
 	thread_data_t *tdata = get_tls(threadid);
+	#endif
 	tdata->lastBB = 0; //this may be the wrong place
 	tdata->rwContext.addrs.clear();
 	tdata->rwContext.pred.clear();
@@ -986,8 +1000,10 @@ VOID MallocAfter(ADDRINT ret, THREADID threadid)
 	if(KnobSupressMalloc)
 		return;
 	
+	#ifdef THREADSAFE
 	assert(threadid <= numThreads);
 	thread_data_t* tdata = get_tls(threadid);
+	#endif
 		
 	//Map version
 	if(tdata->malloc_size > 0)
@@ -1126,9 +1142,13 @@ VOID Image(IMG img, VOID *v)
 
 VOID ThreadStart(THREADID threadid, CONTEXT *ctxt, INT32 flags, VOID *v)
 {
+	#ifdef THREADSAFE
     PIN_GetLock(&lock, threadid+1);
+    #endif
     numThreads++;
-    PIN_ReleaseLock(&lock);
+    #ifdef THREADSAFE
+	PIN_ReleaseLock(&lock);
+    #endif
 
     thread_data_t* tdata = new thread_data_t;
     tdata->lastBB = 0;
@@ -1182,7 +1202,11 @@ int main(int argc, char * argv[])
 	shadowMemory.clear();
 
     // Initialize the lock
+    #ifdef THREADSAFE
     PIN_InitLock(&lock);
+    #else
+    tdata = new thread_data_t;
+    #endif
     
 	// Obtain  a key for TLS storage.
 	tls_key = PIN_CreateThreadDataKey(0);

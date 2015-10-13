@@ -2,6 +2,8 @@ CXX = g++
 CC = gcc
 BUILDTEST = -O3 -vec-report3 -vec-threshold0 -inline-debug-info -g
 PINPATH = ../pin
+#uncomment to build thread safe version of vectorseeker
+#THREADED = -DTHREADSAFE
 #uncomment to use old shadowmemory
 #NOCACHESM = -DNOSHAODWCACHE
 XEDNAME = xed-intel64
@@ -11,7 +13,7 @@ LINKDIR1 = -L$(PINPATH)/intel64/runtime/cpplibs -L$(PINPATH)/extras/$(XEDNAME)/l
 LINKDIR2 = -L$(PINPATH)/extras/$(XEDNAME)/lib -L$(PINPATH)/intel64/lib -L$(PINPATH)/intel64/lib-ext
 #LIBS = -lpin -lxed -ldwarf -lelf -ldl
 LIBS = -lpin -lxed -lpindwarf -ldl
-COPTS1 = -g -std=gnu++0x -c -Wall -Werror -Wno-unknown-pragmas  -O3 -fomit-frame-pointer -DBIGARRAY_MULTIPLIER=1 -DUSING_XED  -fno-strict-aliasing
+COPTS1 = -g -std=gnu++0x -c -Wall -Werror -Wno-unknown-pragmas  -O3 -fomit-frame-pointer $(THREADED) -DBIGARRAY_MULTIPLIER=1 -DUSING_XED  -fno-strict-aliasing
 COPTS2 = -fno-stack-protector -DTARGET_IA32E -DHOST_IA32E -fPIC -DTARGET_LINUX -O3 -fomit-frame-pointer $(NOCACHESM)
 LOPTS = -g -std=gnu++0x -Wl,--hash-style=sysv -shared -Wl,-Bsymbolic -Wl,--version-script=$(PINPATH)/source/include/pin/pintool.ver
 
