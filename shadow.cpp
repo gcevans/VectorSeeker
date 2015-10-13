@@ -186,31 +186,43 @@ void CacheLine::write(unsigned int offset,long depth)
 long ShadowMemory::readMem(ADDRINT address)
 {
 	long value = 0;
+	#ifdef THREADSAFE
 	PIN_RWMutexReadLock(&lock);
+	#endif
 	auto itr = cacheShadowMemory.find(address/cacheLineSize);
 	if(itr != cacheShadowMemory.end())
 	{
 	    value = itr->second.read(address%cacheLineSize);		
 	}
+	#ifdef THREADSAFE
     PIN_RWMutexUnlock(&lock);
+    #endif
 	return value;
 };
 
 //Access Register
 long ShadowMemory::readReg(size_t reg)
 {
+	#ifdef THREADSAFE
 	PIN_RWMutexReadLock(&lock);
+	#endif
 	long value = shadowRegisters[reg];
+	#ifdef THREADSAFE
     PIN_RWMutexUnlock(&lock);
+    #endif
 	return value;	
 };
 
 //Set Memory
 void ShadowMemory::writeMem(ADDRINT address, long depth)
 {
+	#ifdef THREADSAFE
 	PIN_RWMutexWriteLock(&lock);
+	#endif
 	this->writeMemUnlocked(address, depth);
+	#ifdef THREADSAFE
     PIN_RWMutexUnlock(&lock);
+    #endif
 };
 
 void ShadowMemory::writeMemUnlocked(ADDRINT address, long depth)
@@ -221,15 +233,21 @@ void ShadowMemory::writeMemUnlocked(ADDRINT address, long depth)
 //Set Register
 void ShadowMemory::writeReg(size_t reg, long depth)
 {
+	#ifdef THREADSAFE
 	PIN_RWMutexWriteLock(&lock);
+	#endif
 	shadowRegisters[reg] = depth;
+	#ifdef THREADSAFE
     PIN_RWMutexUnlock(&lock);
+    #endif
 };
 
 //Clear
 void ShadowMemory::clear()
 {
+	#ifdef THREADSAFE
 	PIN_RWMutexWriteLock(&lock);
+	#endif
 	for(int i = 0; i < XED_REG_LAST; i++)
 	{
 		shadowRegisters[i] = 0;
@@ -244,12 +262,16 @@ void ShadowMemory::clear()
 			this->writeMemUnlocked(start+i, 1);
 	}
 
+	#ifdef THREADSAFE
     PIN_RWMutexUnlock(&lock);
+    #endif
 };
 
 void ShadowMemory::arrayMem(ADDRINT start, size_t size,bool tracinglevel)
 {
+	#ifdef THREADSAFE
 	PIN_RWMutexWriteLock(&lock);
+	#endif
 	if(size > 0)
 		allocationMap[start] = size;
 	
@@ -257,23 +279,31 @@ void ShadowMemory::arrayMem(ADDRINT start, size_t size,bool tracinglevel)
 		for(size_t i = 0; i < size; i++)
 			this->writeMemUnlocked(start+i, 1);
 
+	#ifdef THREADSAFE
     PIN_RWMutexUnlock(&lock);
+    #endif
 }
 
 void ShadowMemory::arrayMemClear(ADDRINT start)
 {
+	#ifdef THREADSAFE
 	PIN_RWMutexWriteLock(&lock);
+	#endif
 	for(size_t i = 0; i < allocationMap[start]; i++)
 		this->writeMemUnlocked(start+i, 0);
 	
 	allocationMap.erase(start);
+	#ifdef THREADSAFE
     PIN_RWMutexUnlock(&lock);
+    #endif
 }
 
 bool ShadowMemory::memIsArray(VOID *addr)
 {
 	bool isArray = false;
+	#ifdef THREADSAFE
 	PIN_RWMutexReadLock(&lock);
+	#endif
 	auto it = allocationMap.upper_bound((size_t) addr);
 
 	if(it != allocationMap.end() && !isArray)
@@ -284,7 +314,9 @@ bool ShadowMemory::memIsArray(VOID *addr)
 			isArray = true;
 		}
 	}
+	#ifdef THREADSAFE
     PIN_RWMutexUnlock(&lock);
+    #endif
 
 	return isArray;
 
@@ -301,19 +333,25 @@ bool ShadowMemory::memIsArray(VOID *addr)
 
 void ShadowMemory::printAllocationMap(FILE *out)
 {
+	#ifdef THREADSAFE
 	PIN_RWMutexReadLock(&lock);
+	#endif
 	for(auto a : allocationMap)
 	{
 		fprintf(out, "[%p,%p]", (void*) a.first, (void *)(a.first + a.second));
 	}
 	fprintf(out, "\n");
+	#ifdef THREADSAFE
     PIN_RWMutexUnlock(&lock);
+    #endif
 }
 
 
 ShadowMemory::ShadowMemory()
 {
+	#ifdef THREADSAFE
 	assert(PIN_RWMutexInit(&lock));
+	#endif
 }
 ShadowMemory::ShadowMemory(const ShadowMemory &s)
 {

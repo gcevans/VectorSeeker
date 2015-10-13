@@ -34,7 +34,9 @@ private:
 	long shadowRegisters[XED_REG_LAST]; // Register Memory
 	unordered_map<ADDRINT,CacheLine> cacheShadowMemory;
 	map<ADDRINT,size_t> allocationMap;
+#ifdef THREADSAFE
 	PIN_RWMUTEX	lock;
+#endif
 	void writeMemUnlocked(ADDRINT address, long depth);
 
 public:
