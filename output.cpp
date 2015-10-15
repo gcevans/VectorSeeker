@@ -52,7 +52,8 @@ VOID writeLog(FILE * trace)
 	if(!KnobForFrontend)
 	{
 		#ifdef NOSHAODWCACHE
-		fprintf(trace, "#start instruction log NO SHADOWCACHE\b"); #else
+		fprintf(trace, "#start instruction log NO SHADOWCACHE\b");
+		#else
 		fprintf(trace, "#start instruction log\n");
 		#endif
 	}
