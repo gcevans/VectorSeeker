@@ -94,6 +94,10 @@ FILE *bbl_log;
 list<long long> loopStack;
 #endif
 
+#ifndef THREADSAFE
+thread_data_t *tdata;
+#endif
+
 //unordered_map<size_t, BBData> basicBlocks;
 vector<BBData> basicBlocks;
 BBData empty;

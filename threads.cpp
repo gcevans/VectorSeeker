@@ -37,10 +37,6 @@ void initThread(THREADID threadid)
     PIN_SetThreadData(tls_key, tdata, threadid);
 }
 
-#ifndef THREADSAFE
-thread_data_t *tdata;
-#endif
-
 // function to access thread-specific data
 thread_data_t* get_tls(THREADID threadid)
 {
