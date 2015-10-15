@@ -6,7 +6,10 @@
 #include <unordered_map>
 #include <map>
 
-const int cacheLineSize = 128;
+const int regionsBits = 2;
+const int regionsNum = 1 << regionsBits;
+const int regionsOff = 7;
+const int cacheLineSize = 1 << regionsOff; // 128 bytes
 
 class CacheLine
 {
@@ -31,11 +34,11 @@ public:
 class ShadowMemory
 {
 private:
-	long shadowRegisters[XED_REG_LAST]; // Register Memory
-	unordered_map<ADDRINT,CacheLine> cacheShadowMemory;
+	unordered_map<ADDRINT,CacheLine> cacheShadowMemory[regionsNum];
 	map<ADDRINT,size_t> allocationMap;
 #ifdef THREADSAFE
-	PIN_RWMUTEX	lock;
+	PIN_RWMUTEX	regionLock[regionsNum];
+	PIN_RWMUTEX allocationLock;
 #endif
 	void writeMemUnlocked(ADDRINT address, long depth);
 

@@ -77,6 +77,7 @@ ShadowMemory shadowMemory;
 #endif
 
 unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
+const unordered_map<ADDRINT,instructionLocationsData > &constInstructionLocations = instructionLocations;
 unordered_map<ADDRINT, instructionDebugData> debugData;
 unordered_map<ADDRINT, ResultVector > instructionResults;
 unsigned vectorInstructionCountSavings;
@@ -575,7 +576,9 @@ VOID recoredBaseInst(VOID *ip, THREADID threadid)
 	instructionCount++;
 		
 	long value = 0;
-	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ip]);
+	auto ciItr = instructionLocations.find((ADDRINT)ip);
+	assert(ciItr != instructionLocations.end());
+	const instructionLocationsData *current_instruction = &(ciItr->second);
 	
 	for(unsigned int i = 0; i < current_instruction->registers_read.size(); i++)
 	{
