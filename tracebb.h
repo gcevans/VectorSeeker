@@ -3,6 +3,7 @@
 
 #include "shadow.h"
 #include "instructions.h"
+#include "resultvector.h"
 
 #include <vector>
 #include <set>
@@ -36,9 +37,9 @@ public:
 	VOID pushInstruction(instructionLocationsData ins);
 	VOID printBlock(FILE *out);
 #ifdef NOSHAODWCACHE
-	VOID execute(ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers, FILE *out);
+	VOID execute(ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out);
 #else
-	VOID execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, ShadowRegisters &registers, FILE *out);
+	VOID execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, ShadowRegisters &registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out);
 #endif
 	VOID addSuccessors(ADDRINT successor);
 	vector<ADDRINT> getAddrs();

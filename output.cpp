@@ -8,21 +8,27 @@ bool sortBySecond(pair<long,long> i, pair<long,long> j)
 	return(i.second > j.second);
 }
 
-bool instructionLocationsDataPointerSort(instructionLocationsData *a, instructionLocationsData *b)
-{
-	if(instructionResults[a->ip].getExecutionCount() > instructionResults[b->ip].getExecutionCount())
-		return true;
-	else if(instructionResults[a->ip].getExecutionCount() < instructionResults[b->ip].getExecutionCount())
-		return false;
-	else
-	{
-		int files_differ = debugData[a->ip].file_name.compare(debugData[b->ip].file_name);
-		if(files_differ == 0)
-			return(debugData[a->ip].line_number < debugData[b->ip].line_number);
 
-		return(files_differ < 0);
+struct instructionLocationsDataPointerSort
+{
+	unordered_map<ADDRINT, ResultVector > *instructionResults;
+	bool operator()(instructionLocationsData *a, instructionLocationsData *b)
+	{
+		if((*instructionResults)[a->ip].getExecutionCount() > (*instructionResults)[b->ip].getExecutionCount())
+			return true;
+		else if((*instructionResults)[a->ip].getExecutionCount() < (*instructionResults)[b->ip].getExecutionCount())
+			return false;
+		else
+		{
+			int files_differ = debugData[a->ip].file_name.compare(debugData[b->ip].file_name);
+			if(files_differ == 0)
+				return(debugData[a->ip].line_number < debugData[b->ip].line_number);
+
+			return(files_differ < 0);
+		}
 	}
-}
+
+};
 
 bool instructionLocationsDataPointerAddrSort(instructionLocationsData *a, instructionLocationsData *b)
 {
@@ -30,18 +36,20 @@ bool instructionLocationsDataPointerAddrSort(instructionLocationsData *a, instru
 }
 
 
-void buildOutputMaps(vector<instructionLocationsData *> &pmap, map< string,map<int,vector<instructionLocationsData *>>> &lmap)
+void buildOutputMaps(vector<instructionLocationsData *> &pmap, map< string,map<int,vector<instructionLocationsData *>>> &lmap, unordered_map<ADDRINT, ResultVector > &instructionResults)
 {
+	instructionLocationsDataPointerSort sorter;
+	sorter.instructionResults = &instructionResults;
 	for(auto ipit = instructionLocations.begin(); ipit != instructionLocations.end(); ++ipit)
 	{
 		pmap.push_back(&(ipit->second));
 		lmap[debugData[ipit->second.ip].file_name][debugData[ipit->second.ip].line_number].push_back(&(ipit->second));
 	}
 	
-	sort(pmap.begin(),pmap.end(),instructionLocationsDataPointerSort);
+	sort(pmap.begin(),pmap.end(),sorter);
 }
 
-VOID writeLog(FILE * trace)
+VOID writeLog(FILE * trace, unordered_map<ADDRINT, ResultVector > &instructionResults)
 {
 	bool linesFound = false;
 	bool filesFound = false;	
@@ -58,7 +66,7 @@ VOID writeLog(FILE * trace)
 		#endif
 	}
 
-	buildOutputMaps(profile_list,line_map);
+	buildOutputMaps(profile_list,line_map,instructionResults);
 
 	for(auto ins : profile_list)
 	{
@@ -157,13 +165,13 @@ VOID writeLog(FILE * trace)
 	}
 }
 
-VOID writeOnOffLog(FILE * trace)
+VOID writeOnOffLog(FILE * trace, unordered_map<ADDRINT, ResultVector > &instructionResults)
 {
 	vector<instructionLocationsData *> profile_list;
 	map< string,map<int,vector<instructionLocationsData *> > >line_map;
 	vector<instructionLocationsData *> *current_line;
 
-	buildOutputMaps(profile_list,line_map);
+	buildOutputMaps(profile_list,line_map,instructionResults);
 
 	for(auto ins : profile_list)
 	{	
@@ -212,7 +220,7 @@ void WriteBBDotLog(FILE *out)
 	}
 }
 
-void writeBBReport(FILE *trace)
+void writeBBReport(FILE *trace, unordered_map<ADDRINT, ResultVector > &instructionResults)
 {
 
 	for(auto bb : basicBlocks)
@@ -254,7 +262,7 @@ void writeBBReport(FILE *trace)
 
 }
 
-bool checkvector(BBData bb)
+bool checkvector(BBData bb, unordered_map<ADDRINT, ResultVector > &instructionResults)
 {
 		vector<ADDRINT> addrs = bb.getAddrs();
 		bool allSingle = true;
@@ -278,7 +286,7 @@ bool checkvector(BBData bb)
 	return false;
 }
 
-void BBSummary(FILE *trace)
+void BBSummary(FILE *trace, unordered_map<ADDRINT, ResultVector > &instructionResults)
 {
 	int bbcount = 0;
 	int bbvector = 0;
@@ -298,7 +306,7 @@ void BBSummary(FILE *trace)
 			++bbexecuted;
 			bbexecutedtotal += bb.getNumExecution();
 
-			if(checkvector(bb))
+			if(checkvector(bb, instructionResults))
 			{
 				++bbvector;
 				bbvectorexecutedtotal += bb.getNumExecution();
@@ -342,7 +350,7 @@ void logBasicBlock(BBL bbl, ADDRINT id, FILE *bbl_log)
 
 
 
-void finalOutput(FILE *trace, FILE *bbl_log)
+void finalOutput(FILE *trace, FILE *bbl_log, unordered_map<ADDRINT, ResultVector > &instructionResults)
 {
 	if(KnobSummaryOn)
 	{
@@ -353,7 +361,7 @@ void finalOutput(FILE *trace, FILE *bbl_log)
 
 	if(KnobBBSummary)
 	{
-		BBSummary(trace);
+		BBSummary(trace, instructionResults);
 	}
 
 	// print basic block info
@@ -373,19 +381,19 @@ void finalOutput(FILE *trace, FILE *bbl_log)
 	fclose(trace);
 }
 
-void traceOutput(FILE *trace)
+void traceOutput(FILE *trace, unordered_map<ADDRINT, ResultVector > &instructionResults)
 {
 
 	if(KnobVectorLineSummary)
 	{
-		writeOnOffLog(trace);
+		writeOnOffLog(trace, instructionResults);
 	}
 	else if(KnobBBReport)
 	{
-		writeBBReport(trace);
+		writeBBReport(trace, instructionResults);
 	}
 	else
 	{
-		writeLog(trace);
+		writeLog(trace, instructionResults);
 	}
 }

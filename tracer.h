@@ -23,7 +23,7 @@ extern KNOB<bool> KnobBBReport;
 extern KNOB<bool> KnobVectorLineSummary;
 
 extern unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
-extern unordered_map<ADDRINT, ResultVector> instructionResults;
+// extern unordered_map<ADDRINT, ResultVector> instructionResults;
 extern unordered_map<ADDRINT, instructionDebugData> debugData;
 extern unsigned vectorInstructionCountSavings;
 extern vector<BBData> basicBlocks;

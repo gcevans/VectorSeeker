@@ -4,6 +4,7 @@
 #include "pin.H"
 #include "shadow.h"
 #include "tracebb.h"
+#include "resultvector.h"
 
 
 extern TLS_KEY tls_key;
@@ -21,6 +22,7 @@ public:
 	size_t lastBB;
 	ExecutionContex rwContext;
 	ShadowRegisters registers;
+	unordered_map<ADDRINT, ResultVector > instructionResults;
 };
 
 void initVSThreading();

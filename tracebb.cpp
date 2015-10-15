@@ -7,9 +7,9 @@
 extern unsigned instructionCount;
 
 #ifdef NOSHAODWCACHE
-VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers, FILE *out)
+VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out)
 #else
-VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowMemory, ShadowRegisters &registers, FILE *out)
+VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowMemory, ShadowRegisters &registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out)
 #endif
 {
 	++instructionCount;
@@ -40,9 +40,9 @@ VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemory &shadowM
 }
 
 #ifdef NOSHAODWCACHE
-VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UINT32>&one, const pair<ADDRINT,UINT32>&two, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers, FILE *out)
+VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UINT32>&one, const pair<ADDRINT,UINT32>&two, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out)
 #else
-VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UINT32>&one, const pair<ADDRINT,UINT32>&two, ShadowMemory &shadowMemory, ShadowRegisters &registers, FILE *out)
+VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UINT32>&one, const pair<ADDRINT,UINT32>&two, ShadowMemory &shadowMemory, ShadowRegisters &registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out)
 #endif
 {
 
@@ -158,9 +158,9 @@ void printAddrs(const vector<pair<ADDRINT,UINT32> > &addrs, FILE *out)
 }
 
 #ifdef NOSHAODWCACHE
-VOID BBData::execute(ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, ShadowRegisters registers, FILE *out)
+VOID BBData::execute(ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, ShadowRegisters registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out)
 #else
-VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, ShadowRegisters &registers, FILE *out)
+VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, ShadowRegisters &registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out)
 #endif
 {
 	if(KnobBBSummary)
@@ -186,7 +186,7 @@ VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, Shad
 
 		if(instructions[i].memOperands == 0)
 		{
-			handleBaseInstBB(instructions[i], shadowMemory, registers, out);
+			handleBaseInstBB(instructions[i], shadowMemory, registers, instructionResults, out);
 		}
 		else if(instructions[i].memOperands < 3)
 		{
@@ -203,7 +203,7 @@ VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, Shad
 			}
 
 			if(contexts.pred[memOpsCount/2])
-				handleMemInstBB(instructions[i], contexts.addrs[memOpsCount], contexts.addrs[memOpsCount+1], shadowMemory, registers, out);
+				handleMemInstBB(instructions[i], contexts.addrs[memOpsCount], contexts.addrs[memOpsCount+1], shadowMemory, registers, instructionResults, out);
 	
 			memOpsCount += 2;
 		}

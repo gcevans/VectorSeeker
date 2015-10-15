@@ -35,7 +35,6 @@ void initThread(THREADID threadid)
     assert(tdata != nullptr);
 
     PIN_SetThreadData(tls_key, tdata, threadid);
-
 }
 
 #ifndef THREADSAFE

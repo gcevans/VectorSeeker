@@ -4,7 +4,7 @@
 #include "tracer.h"
 
 void logBasicBlock(BBL bbl, ADDRINT id, FILE *bbl_log);
-void finalOutput(FILE *trace, FILE* bbl_log);
-void traceOutput(FILE *trace);
+void finalOutput(FILE *trace, FILE* bbl_log, unordered_map<ADDRINT, ResultVector > &instructionResults);
+void traceOutput(FILE *trace, unordered_map<ADDRINT, ResultVector > &instructionResults);
 
 #endif

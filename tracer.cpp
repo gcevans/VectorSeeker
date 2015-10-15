@@ -81,7 +81,7 @@ ShadowMemory shadowMemory;
 unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
 const unordered_map<ADDRINT,instructionLocationsData > &constInstructionLocations = instructionLocations;
 unordered_map<ADDRINT, instructionDebugData> debugData;
-unordered_map<ADDRINT, ResultVector > instructionResults;
+// unordered_map<ADDRINT, ResultVector > instructionResults;
 unsigned vectorInstructionCountSavings;
 int traceRegionCount;
 bool inAlloc;
@@ -161,14 +161,18 @@ KNOB<bool> KnobBBSummary(KNOB_MODE_WRITEONCE, "pintool",
 // This function is called when the application exits
 VOID Fini(INT32 code, VOID *v)
 {
+	#ifdef THREADSAFE
+	thread_data_t *tdata = get_tls(0);
+    #endif
+
 	if(tracinglevel != 0)
 	{
 		fprintf(trace,"Progam ended with tracing on\n");
 
-		traceOutput(trace);
+		traceOutput(trace, tdata->instructionResults);
 	}
 
-	finalOutput(trace, bbl_log);
+	finalOutput(trace, bbl_log, tdata->instructionResults);
 }
 
 VOID recoredBaseInst(VOID *ip, THREADID threadid)
@@ -206,7 +210,7 @@ VOID recoredBaseInst(VOID *ip, THREADID threadid)
 	
 	if(value > 0 && (!((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
-		instructionResults[(ADDRINT)ip].addToDepth(value);
+		tdata->instructionResults[(ADDRINT)ip].addToDepth(value);
 #ifdef LOOPSTACK
 		current_instruction->loopid = loopStack;
 #endif
@@ -310,7 +314,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 	if(value > 0 && !(((current_instruction->type == MOVEONLY_INS_TYPE) && KnobSkipMove)))
 	{
-		instructionResults[(ADDRINT)ip].addToDepth(value);
+		tdata->instructionResults[(ADDRINT)ip].addToDepth(value);
 #ifdef LOOPSTACK
 		current_instruction->loopid = loopStack;
 #endif
@@ -336,7 +340,7 @@ VOID blockTracer(VOID *ip, ADDRINT id, THREADID threadid)
 
 	if(tracinglevel && tdata->lastBB && !inAlloc)
 	{
-		basicBlocks[tdata->lastBB].execute(tdata->rwContext, shadowMemory, tdata->registers, trace);
+		basicBlocks[tdata->lastBB].execute(tdata->rwContext, shadowMemory, tdata->registers, tdata->instructionResults, trace);
 		basicBlocks[tdata->lastBB].addSuccessors((ADDRINT) ip);
 		if(KnobDebugTrace)
 		{
@@ -508,19 +512,23 @@ VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
     #endif
 }
 
-void clearVectors()
+void clearVectors(THREADID threadid)
 {
+	#ifdef THREADSAFE
+	thread_data_t *tdata = get_tls(threadid);
+	#endif
+
 	for(auto it = instructionLocations.begin(); it != instructionLocations.end(); ++it)
 	{
 		it->second.logged = false;
 	}
-	instructionResults.clear();
+	tdata->instructionResults.clear();
 }
 
 // Clear state to just initialized vectors
 VOID clearState(THREADID threadid)
 {
-	clearVectors();
+	clearVectors(threadid);
 	shadowMemory.clear();
 	
 	#ifdef THREADSAFE
@@ -536,6 +544,10 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 {
 	#ifdef THREADSAFE
     PIN_GetLock(&lock, threadid+1);
+
+	assert(threadid <= numThreads);
+	thread_data_t *tdata = get_tls(threadid);
+    assert(tdata != nullptr);
     #endif
 
 	if(traceRegionCount > KnobTraceLimit.Value())
@@ -559,7 +571,7 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 		blockTracer(NULL, 0,0 ); // trace final block
 		shadowMemory.clear();
 
-		traceOutput(trace);
+		traceOutput(trace, tdata->instructionResults);
 
 		tracinglevel = 0;
 	}
@@ -807,7 +819,7 @@ int main(int argc, char * argv[])
 #ifdef LOOPSTACK
 	loopStack.push_front(-1);
 #endif
-	clearVectors();
+//	clearVectors(0);
 	shadowMemory.clear();
 
     #ifndef THREADSAFE
