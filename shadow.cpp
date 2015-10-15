@@ -210,8 +210,8 @@ long ShadowMemory::readMem(ADDRINT address)
 //Set Memory
 void ShadowMemory::writeMem(ADDRINT address, long depth)
 {
-	int region = getRegion(address);
 	#ifdef THREADSAFE
+	int region = getRegion(address);
 	// PIN_RWMutexReadLock(&regionLock[region]);
 	#endif
 	// auto itr = cacheShadowMemory[region].find(address/cacheLineSize);

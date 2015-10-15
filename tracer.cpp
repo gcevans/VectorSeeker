@@ -38,6 +38,7 @@ END_LEGAL */
 #include "tracer_decode.h"
 #include "shadow.h"
 #include "output.h"
+#include "threads.h"
 
 #include <algorithm>
 #include <map>
@@ -85,7 +86,9 @@ unsigned vectorInstructionCountSavings;
 int traceRegionCount;
 bool inAlloc;
 
+// Output Files
 FILE * trace;
+FILE *bbl_log;
 
 #ifdef LOOPSTACK
 list<long long> loopStack;
@@ -97,40 +100,8 @@ BBData empty;
 // vector<pair<ADDRINT,UINT32> > rwAddressLog;
 size_t UBBID;
 
-// BBL Debug Globals
-FILE *bbl_log;
-
 // Local Functions
 VOID clearState(THREADID threadid);
-
-// TLS globals
-static  TLS_KEY tls_key;
-#ifdef THREADSAFE
-PIN_LOCK lock;
-#endif
-THREADID numThreads = 0;
-
-class thread_data_t
-{
-public:
-	size_t malloc_size;
-		// UINT8 pad[64-sizeof(ADDRINT)];
-	size_t lastBB;
-	ExecutionContex rwContext;
-	ShadowRegisters registers;
-};
-
-#ifndef THREADSAFE
-thread_data_t *tdata;
-#endif
-
-// function to access thread-specific data
-thread_data_t* get_tls(THREADID threadid)
-{
-    thread_data_t* tdata = 
-          static_cast<thread_data_t*>(PIN_GetThreadData(tls_key, threadid));
-    return tdata;
-}
 
 // Command line arguments
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
@@ -790,20 +761,7 @@ VOID Image(IMG img, VOID *v)
 
 VOID ThreadStart(THREADID threadid, CONTEXT *ctxt, INT32 flags, VOID *v)
 {
-	#ifdef THREADSAFE
-    PIN_GetLock(&lock, threadid+1);
-    #endif
-    numThreads++;
-    #ifdef THREADSAFE
-	PIN_ReleaseLock(&lock);
-    #endif
-
-    thread_data_t* tdata = new thread_data_t;
-    tdata->lastBB = 0;
-
-    assert(tdata != nullptr);
-
-    PIN_SetThreadData(tls_key, tdata, threadid);
+	initThread(threadid);
 }
 
 /* ===================================================================== */
@@ -830,6 +788,9 @@ int main(int argc, char * argv[])
 	// Initialize Xed decoder
 	xed_tables_init();
 
+	// Initialize VS Threading Support
+	initVSThreading();
+
 	// Initialize VectorSeeker globals
 	trace = fopen(KnobOutputFile.Value().c_str(), "w");
 	if(KnobDebugTrace || KnobBBDotLog)
@@ -849,10 +810,7 @@ int main(int argc, char * argv[])
 	clearVectors();
 	shadowMemory.clear();
 
-    // Initialize the lock
-    #ifdef THREADSAFE
-    PIN_InitLock(&lock);
-    #else
+    #ifndef THREADSAFE
     tdata = new thread_data_t;
     #endif
     

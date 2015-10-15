@@ -28,8 +28,4 @@ extern unordered_map<ADDRINT, instructionDebugData> debugData;
 extern unsigned vectorInstructionCountSavings;
 extern vector<BBData> basicBlocks;
 
-#ifdef THREADSAFE
-extern PIN_LOCK lock;
-#endif
-
 #endif
