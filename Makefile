@@ -17,7 +17,7 @@ LOPTS = -g -std=gnu++0x -Wl,--hash-style=sysv -shared -Wl,-Bsymbolic -Wl,--versi
 
 all : tracer.so mintest deeploops mintest-nodebug
 
-tracer.o : tracer.cpp tracer.h tracerlib.h tracer_decode.h shadow.h resultvector.h tracebb.h instructions.h
+tracer.o : tracer.cpp tracer.h tracerlib.h tracer_decode.h shadow.h resultvector.h tracebb.h instructions.h output.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o tracer.o tracer.cpp
 
 tracer_decode.o : tracer_decode.cpp tracer_decode.h tracer.h instructions.h shadow.h
@@ -29,11 +29,14 @@ tracebb.o : tracebb.cpp tracer_decode.h tracer.h tracebb.h shadow.h instructions
 shadow.o : shadow.cpp shadow.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o shadow.o shadow.cpp
 
+output.o : output.cpp output.h
+	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o output.o output.cpp
+
 resultvector.o : resultvector.cpp resultvector.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o resultvector.o resultvector.cpp
 
-tracer.so : tracer.o tracer_decode.o shadow.o resultvector.o tracebb.o
-	$(CXX) $(LOPTS) $(LINKDIR1) -o tracer.so tracer.o tracer_decode.o shadow.o resultvector.o tracebb.o $(LINKDIR2) $(LIBS)
+tracer.so : tracer.o tracer_decode.o shadow.o resultvector.o tracebb.o output.o
+	$(CXX) $(LOPTS) $(LINKDIR1) -o tracer.so tracer.o tracer_decode.o shadow.o resultvector.o output.o tracebb.o $(LINKDIR2) $(LIBS)
 	
 mintest : mintest.o dummy.o tracerlib.o
 	$(CXX) -g -o mintest mintest.o dummy.o tracerlib.o
