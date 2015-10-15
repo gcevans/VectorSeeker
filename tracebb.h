@@ -1,7 +1,6 @@
 #ifndef TRACEBB_H
 #define TRACEBB_H
 
-#include "tracer.h"
 #include "shadow.h"
 #include "instructions.h"
 
