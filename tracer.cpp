@@ -81,7 +81,6 @@ ShadowMemory shadowMemory;
 unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
 const unordered_map<ADDRINT,instructionLocationsData > &constInstructionLocations = instructionLocations;
 unordered_map<ADDRINT, instructionDebugData> debugData;
-// unordered_map<ADDRINT, ResultVector > instructionResults;
 unsigned vectorInstructionCountSavings;
 int traceRegionCount;
 bool inAlloc;
