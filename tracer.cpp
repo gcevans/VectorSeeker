@@ -79,7 +79,6 @@ ShadowMemory shadowMemory;
 #endif
 
 unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
-const unordered_map<ADDRINT,instructionLocationsData > &constInstructionLocations = instructionLocations;
 unordered_map<ADDRINT, instructionDebugData> debugData;
 unsigned vectorInstructionCountSavings;
 int traceRegionCount;
@@ -383,12 +382,8 @@ VOID Trace(TRACE pintrace, VOID *v)
 			    		if(INS_IsOriginal(ins))
 						{
 							instructionType insType;
-							insType = decodeInstructionData(ip, instructionLocations);
-							debugData[ip].instruction = INS_Disassemble(ins);
-							instructionLocations[ip].type = insType;
-							instructionLocations[ip].rtn_name = rtn_name;
-							UINT32 memOperands = INS_MemoryOperandCount(ins);
-							instructionLocations[ip].memOperands = memOperands;
+							insType = instructionLocations[ip].type;
+							UINT32 memOperands = instructionLocations[ip].memOperands;
 
 							if(insType == IGNORED_INS_TYPE)
 								continue;
@@ -741,6 +736,7 @@ VOID Image(IMG img, VOID *v)
                        IARG_END);
         RTN_Close(traceRtn);
     }
+
     traceRtn = RTN_FindByName(img, LOOP_END);
     if (RTN_Valid(traceRtn))
     {
@@ -770,6 +766,27 @@ VOID Image(IMG img, VOID *v)
                        IARG_END);
 
         RTN_Close(traceRtn);
+    }
+
+    for(auto sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec) )
+    {
+    	for(auto rtn= SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn) )
+    	{
+    		RTN_Open(rtn);
+			string rtn_name = RTN_Name(rtn);
+    		for(auto ins= RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins) )
+    		{
+				ADDRINT ip = INS_Address(ins);
+				instructionType insType;
+				insType = decodeInstructionData(ip, instructionLocations);
+				debugData[ip].instruction = INS_Disassemble(ins);
+				instructionLocations[ip].type = insType;
+				instructionLocations[ip].rtn_name = rtn_name;
+				UINT32 memOperands = INS_MemoryOperandCount(ins);
+				instructionLocations[ip].memOperands = memOperands;
+    		}
+    		RTN_Close(rtn);
+    	}
     }
 }
 
