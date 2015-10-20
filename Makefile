@@ -31,7 +31,7 @@ tracebb.o : tracebb.cpp tracer_decode.h tracer.h tracebb.h shadow.h instructions
 shadow.o : shadow.cpp shadow.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o shadow.o shadow.cpp
 
-output.o : output.cpp output.h
+output.o : output.cpp output.h instructions.h tracer.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o output.o output.cpp
 
 threads.o : threads.cpp threads.h
