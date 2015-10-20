@@ -67,6 +67,7 @@ END_LEGAL */
 
 // Shared Globals
 unsigned instructionCount;
+bool inMain;
 
 // Globals
 unsigned tracinglevel;
@@ -79,6 +80,7 @@ ShadowMemory shadowMemory;
 #endif
 
 unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
+const unordered_map<ADDRINT,instructionLocationsData > &constInstructionLocations = instructionLocations;
 unordered_map<ADDRINT, instructionDebugData> debugData;
 unsigned vectorInstructionCountSavings;
 int traceRegionCount;
@@ -191,8 +193,8 @@ VOID recoredBaseInst(VOID *ip, THREADID threadid)
 	instructionCount++;
 		
 	long value = 0;
-	auto ciItr = instructionLocations.find((ADDRINT)ip);
-	assert(ciItr != instructionLocations.end());
+	auto ciItr = constInstructionLocations.find((ADDRINT)ip);
+	assert(ciItr != constInstructionLocations.end());
 	const instructionLocationsData *current_instruction = &(ciItr->second);
 	
 	for(unsigned int i = 0; i < current_instruction->registers_read.size(); i++)
@@ -272,7 +274,10 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 		value = max(shadowMemory.readMem((ADDRINT)addr2), value);
 	}
 
-	instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ip]);
+	auto ciItr = constInstructionLocations.find((ADDRINT)ip);
+	assert(ciItr != constInstructionLocations.end());
+	const instructionLocationsData *current_instruction = &(ciItr->second);
+	// instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ip]);
 
 
 	for(unsigned int i = 0; i < current_instruction->registers_read.size(); i++)
@@ -356,6 +361,9 @@ VOID blockTracer(VOID *ip, ADDRINT id, THREADID threadid)
 
 VOID Trace(TRACE pintrace, VOID *v)
 {
+	// if(!inMain)
+	// 	return;
+
     for (BBL bbl = TRACE_BblHead(pintrace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
     {
     	// Only instrument instructions in a vaid RTN that is neither malloc or free
@@ -382,8 +390,24 @@ VOID Trace(TRACE pintrace, VOID *v)
 			    		if(INS_IsOriginal(ins))
 						{
 							instructionType insType;
-							insType = instructionLocations[ip].type;
-							UINT32 memOperands = instructionLocations[ip].memOperands;
+							auto ciItr = constInstructionLocations.find((ADDRINT)ip);
+							if(ciItr == constInstructionLocations.end())
+							{
+								auto dbrtn = INS_Rtn(BBL_InsHead(bbl));
+								RTN_Open(dbrtn);
+								cerr << "IMG = " << IMG_Name(SEC_Img(RTN_Sec(INS_Rtn(BBL_InsHead(bbl))))) << endl;
+								cerr << "RTN = " << rtn_name << endl;
+								cerr << "ADDR = " << (void *) ip << endl;
+								for(auto dbins = RTN_InsHead(dbrtn); INS_Valid(dbins); dbins = INS_Next(dbins))
+								{
+									cerr << (void *) INS_Address(dbins) << "\t" << INS_Disassemble(dbins) << endl;
+								}
+								RTN_Close(dbrtn);
+								assert(ciItr != constInstructionLocations.end());
+							}
+							const instructionLocationsData *current_instruction = &(ciItr->second);
+							insType = current_instruction->type;
+							UINT32 memOperands = current_instruction->memOperands;
 
 							if(insType == IGNORED_INS_TYPE)
 								continue;
@@ -440,7 +464,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 							}
 
 							//push instruction on current basic block
-							basicBlocks[UBBID].pushInstruction(instructionLocations[ip]);
+							basicBlocks[UBBID].pushInstruction(current_instruction);
 						}
 						else
 						{
@@ -592,6 +616,19 @@ VOID traceFunctionExit(CHAR * name, ADDRINT start, THREADID threadid)
 	traceOff(name,start,threadid);
 }
 
+// main start
+VOID markMainStart(CHAR * name, ADDRINT start, THREADID threadid)
+{
+	inMain = true;
+	cerr << "Start Main" << endl;
+}
+
+//main end
+VOID markMainEnd(CHAR * name, ADDRINT start, THREADID threadid)
+{
+	cerr << "End Main" << endl;
+	inMain = false;
+}
 // memory allocations other then from malloc
 VOID arrayMem(ADDRINT start, size_t size)
 {
@@ -747,6 +784,26 @@ VOID Image(IMG img, VOID *v)
         RTN_Close(traceRtn);
     }
 #endif
+
+    traceRtn = RTN_FindByName(img, "main");
+    if (RTN_Valid(traceRtn))
+    {
+        RTN_Open(traceRtn);
+        RTN_InsertCall(traceRtn, IPOINT_BEFORE, (AFUNPTR)markMainStart,
+                       IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                       IARG_END);
+        RTN_Close(traceRtn);
+    }
+
+    traceRtn = RTN_FindByName(img, "main");
+    if (RTN_Valid(traceRtn))
+    {
+        RTN_Open(traceRtn);
+        RTN_InsertCall(traceRtn, IPOINT_AFTER, (AFUNPTR)markMainEnd,
+                       IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                       IARG_END);
+        RTN_Close(traceRtn);
+    }
  
  	// Start tracing based on fucntion name defaults to main
     traceRtn = RTN_FindByName(img, KnobTraceFunction.Value().c_str());
@@ -768,6 +825,7 @@ VOID Image(IMG img, VOID *v)
         RTN_Close(traceRtn);
     }
 
+	cerr << "Mapping Image = " << IMG_Name(img) << endl;
     for(auto sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec) )
     {
     	for(auto rtn= SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn) )
@@ -784,6 +842,11 @@ VOID Image(IMG img, VOID *v)
 				instructionLocations[ip].rtn_name = rtn_name;
 				UINT32 memOperands = INS_MemoryOperandCount(ins);
 				instructionLocations[ip].memOperands = memOperands;
+				if(INS_IsAtomicUpdate(ins))
+				{
+					instructionLocations[ip+1] = instructionLocations[ip];
+					debugData[ip+1] = debugData[ip];
+				}
     		}
     		RTN_Close(rtn);
     	}
@@ -836,6 +899,7 @@ int main(int argc, char * argv[])
 	vectorInstructionCountSavings = 0;
 	traceRegionCount = 0;
 	inAlloc = false;
+	inMain = false;
 #ifdef LOOPSTACK
 	loopStack.push_front(-1);
 #endif

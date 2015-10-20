@@ -118,10 +118,10 @@ VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UIN
 
 }
 
-VOID BBData::pushInstruction(instructionLocationsData ins)
+VOID BBData::pushInstruction(const instructionLocationsData *ins)
 {
-	assert(ins.type != IGNORED_INS_TYPE);
-	instructions.push_back(ins);
+	assert(ins->type != IGNORED_INS_TYPE);
+	instructions.push_back(*ins);
 }
 
 VOID BBData::printBlock(FILE *out)

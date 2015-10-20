@@ -34,7 +34,7 @@ public:
 	BBData& operator=(const BBData& s);
 	BBData& operator=(BBData&& rhs);
 	void swap(BBData &s);
-	VOID pushInstruction(instructionLocationsData ins);
+	VOID pushInstruction(const instructionLocationsData *ins);
 	VOID printBlock(FILE *out);
 #ifdef NOSHAODWCACHE
 	VOID execute(ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out);
