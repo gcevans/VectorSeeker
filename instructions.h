@@ -22,8 +22,8 @@ struct instructionLocationsData
 	bool logged;
 	instructionType type;
 	UINT32 memOperands;
-	// USIZE memReadSize;
-	// USIZE memWriteSize;
+	USIZE memReadSize;
+	USIZE memWriteSize;
 	string rtn_name;
 };
 

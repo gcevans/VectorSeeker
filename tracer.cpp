@@ -837,7 +837,7 @@ VOID Image(IMG img, VOID *v)
         RTN_Close(traceRtn);
     }
 
-	cerr << "Mapping Image = " << IMG_Name(img) << endl;
+	// cerr << "Mapping Image = " << IMG_Name(img) << endl;
     for(auto sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec) )
     {
     	for(auto rtn= SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn) )
@@ -854,6 +854,11 @@ VOID Image(IMG img, VOID *v)
 				instructionLocations[ip].rtn_name = rtn_name;
 				UINT32 memOperands = INS_MemoryOperandCount(ins);
 				instructionLocations[ip].memOperands = memOperands;
+				if(memOperands)
+				{
+					instructionLocations[ip].memReadSize = INS_MemoryReadSize(ins);
+					instructionLocations[ip].memWriteSize = INS_MemoryWriteSize(ins);
+				}
 				if(INS_IsAtomicUpdate(ins))
 				{
 					instructionLocations[ip+1] = instructionLocations[ip];
