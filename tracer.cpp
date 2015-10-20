@@ -363,7 +363,8 @@ VOID Trace(TRACE pintrace, VOID *v)
 {
 	// if(!inMain)
 	// 	return;
-
+	PIN_LockClient();
+    
     for (BBL bbl = TRACE_BblHead(pintrace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
     {
     	// Only instrument instructions in a vaid RTN that is neither malloc or free
@@ -393,15 +394,25 @@ VOID Trace(TRACE pintrace, VOID *v)
 							auto ciItr = constInstructionLocations.find((ADDRINT)ip);
 							if(ciItr == constInstructionLocations.end())
 							{
-								auto dbrtn = INS_Rtn(BBL_InsHead(bbl));
+								auto dbrtn = RTN_FindByAddress(ip);
 								RTN_Open(dbrtn);
-								cerr << "IMG = " << IMG_Name(SEC_Img(RTN_Sec(INS_Rtn(BBL_InsHead(bbl))))) << endl;
-								cerr << "RTN = " << rtn_name << endl;
+								cerr << "IMG = " << IMG_Name(SEC_Img(RTN_Sec(dbrtn))) << endl;
+								cerr << "RTN = " << RTN_Name(dbrtn) << endl;
 								cerr << "ADDR = " << (void *) ip << endl;
+								cerr << "INS = " << (void *) INS_Address(ins) << "\t" << INS_Disassemble(ins) << endl;
+								// for(auto dbins = RTN_InsHead(dbrtn); INS_Valid(dbins); dbins = INS_Next(dbins))
+								cerr << "BBL Start" << endl;
+								for(auto dbins = BBL_InsHead(bbl); INS_Valid(dbins); dbins = INS_Next(dbins))
+								{
+									cerr << (void *) INS_Address(dbins) << "\t" << INS_Disassemble(dbins) << endl;
+								}
+								cerr << "BBL End" << endl;
+								cerr << RTN_Name(dbrtn) << " Start" << endl;
 								for(auto dbins = RTN_InsHead(dbrtn); INS_Valid(dbins); dbins = INS_Next(dbins))
 								{
 									cerr << (void *) INS_Address(dbins) << "\t" << INS_Disassemble(dbins) << endl;
 								}
+								cerr << RTN_Name(dbrtn) << " End" << endl;
 								RTN_Close(dbrtn);
 								assert(ciItr != constInstructionLocations.end());
 							}
@@ -475,6 +486,7 @@ VOID Trace(TRACE pintrace, VOID *v)
 	    	}
 		}
     }
+    PIN_UnlockClient 	(  		 );
 }
 
 // Malloc Stuff
