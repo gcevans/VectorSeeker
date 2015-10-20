@@ -207,6 +207,27 @@ long ShadowMemory::readMem(ADDRINT address)
 	return value;
 };
 
+long ShadowMemory::readMem(ADDRINT address, USIZE width)
+{
+	long value = 0;
+	for(USIZE i = 0; i < width; i++)
+	{
+		int region = getRegion(address+i);
+		#ifdef THREADSAFE
+		PIN_RWMutexReadLock(&regionLock[region]);
+		#endif
+		auto itr = cacheShadowMemory[region].find(address/cacheLineSize);
+		if(itr != cacheShadowMemory[region].end())
+		{
+		    value = max(itr->second.read((address+i)%cacheLineSize),value);		
+		}
+		#ifdef THREADSAFE
+	    PIN_RWMutexUnlock(&regionLock[region]);
+	    #endif
+		}
+	return value;
+};
+
 //Set Memory
 void ShadowMemory::writeMem(ADDRINT address, long depth)
 {

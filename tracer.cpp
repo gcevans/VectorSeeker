@@ -264,21 +264,20 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	
 	long value = 0;
 	
-	if(type1 & READ_OPERATOR_TYPE)
-	{
-		value = shadowMemory.readMem((ADDRINT)addr1);
-	}
-
-	if(type2 & READ_OPERATOR_TYPE)
-	{
-		value = max(shadowMemory.readMem((ADDRINT)addr2), value);
-	}
-
 	auto ciItr = constInstructionLocations.find((ADDRINT)ip);
 	assert(ciItr != constInstructionLocations.end());
 	const instructionLocationsData *current_instruction = &(ciItr->second);
 	// instructionLocationsData *current_instruction = &(instructionLocations[(ADDRINT)ip]);
 
+	if(type1 & READ_OPERATOR_TYPE)
+	{
+		value = shadowMemory.readMem((ADDRINT)addr1, current_instruction->memReadSize);
+	}
+
+	if(type2 & READ_OPERATOR_TYPE)
+	{
+		value = max(shadowMemory.readMem((ADDRINT)addr2, current_instruction->memReadSize), value);
+	}
 
 	for(unsigned int i = 0; i < current_instruction->registers_read.size(); i++)
 	{

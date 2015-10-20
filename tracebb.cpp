@@ -58,12 +58,12 @@ VOID handleMemInstBB(const instructionLocationsData &ins, const pair<ADDRINT,UIN
 	
 	if(type1 & READ_OPERATOR_TYPE)
 	{
-		value = shadowMemory.readMem((ADDRINT)addr1);
+		value = shadowMemory.readMem((ADDRINT)addr1, ins.memReadSize);
 	}
 
 	if(type2 & READ_OPERATOR_TYPE)
 	{
-		value = max(shadowMemory.readMem((ADDRINT)addr2), value);
+		value = max(shadowMemory.readMem((ADDRINT)addr2, ins.memReadSize), value);
 	}
 
 	for(unsigned int i = 0; i < ins.registers_read.size(); i++)

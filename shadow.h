@@ -45,6 +45,7 @@ private:
 public:
 	//Access Memory
 	long readMem(ADDRINT address);
+	long readMem(ADDRINT address, USIZE width);
 	//Set Memory
 	void writeMem(ADDRINT address, long depth);
 	//Clear
