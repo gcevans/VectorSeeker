@@ -48,6 +48,7 @@ public:
 	long readMem(ADDRINT address, USIZE width);
 	//Set Memory
 	void writeMem(ADDRINT address, long depth);
+	void writeMem(ADDRINT address, long depth, USIZE width);
 	//Clear
 	void clear();
 	//Add Memory Allocation

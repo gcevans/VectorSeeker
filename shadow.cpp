@@ -257,6 +257,38 @@ void ShadowMemory::writeMem(ADDRINT address, long depth)
 	}
 };
 
+void ShadowMemory::writeMem(ADDRINT address, long depth, USIZE width)
+{
+	for(USIZE i = 0; i < width; i++)
+	{
+		#ifdef THREADSAFE
+		int region = getRegion(address);
+		// PIN_RWMutexReadLock(&regionLock[region]);
+		#endif
+		// auto itr = cacheShadowMemory[region].find(address/cacheLineSize);
+		// if(itr != cacheShadowMemory[region].end())
+		// {
+		// 	itr->second.write(address%cacheLineSize, depth);
+		// 	#ifdef THREADSAFE
+		//     PIN_RWMutexUnlock(&regionLock[region]);
+		//     #endif
+		//     return;
+		// }
+		// else
+		{
+			#ifdef THREADSAFE
+		    // PIN_RWMutexUnlock(&regionLock[region]);
+			PIN_RWMutexWriteLock(&regionLock[region]);
+			#endif
+			this->writeMemUnlocked(address, depth);
+			#ifdef THREADSAFE
+		    PIN_RWMutexUnlock(&regionLock[region]);
+		    #endif
+		}
+		address += 1;
+	}
+};
+
 void ShadowMemory::writeMemUnlocked(ADDRINT address, long depth)
 {
 	int region = getRegion(address);
