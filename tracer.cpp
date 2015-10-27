@@ -39,6 +39,7 @@ END_LEGAL */
 #include "shadow.h"
 #include "output.h"
 #include "threads.h"
+#include <unistd.h>
 
 #include <algorithm>
 #include <map>
@@ -65,6 +66,12 @@ END_LEGAL */
 #define MINTHRESHOLD 0
 #define MINVECTORWIDTH 100
 
+// constants for memory operators
+const UINT32 NONE_OPERATOR_TYPE = 0;
+const UINT32 READ_OPERATOR_TYPE = 1;
+const UINT32 WRITE_OPERATOR_TYPE = 2;
+const UINT32 BOTH_OPERATOR_TYPE = 3;
+
 // Shared Globals
 unsigned instructionCount;
 bool inMain;
@@ -82,6 +89,8 @@ ShadowMemory shadowMemory;
 unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
 const unordered_map<ADDRINT,instructionLocationsData > &constInstructionLocations = instructionLocations;
 unordered_map<ADDRINT, instructionDebugData> debugData;
+PIN_RWMUTEX InstructionsDataLock;
+
 unsigned vectorInstructionCountSavings;
 int traceRegionCount;
 bool inAlloc;
@@ -101,6 +110,7 @@ thread_data_t *tdata;
 //unordered_map<size_t, BBData> basicBlocks;
 vector<BBData> basicBlocks;
 BBData empty;
+
 // vector<pair<ADDRINT,UINT32> > rwAddressLog;
 size_t UBBID;
 
@@ -179,9 +189,11 @@ VOID Fini(INT32 code, VOID *v)
 	finalOutput(trace, bbl_log, tdata->instructionResults);
 }
 
+// Handle instrumentation of an instruction that does not read or write memory
 VOID recoredBaseInst(VOID *ip, THREADID threadid)
 {
 	#ifdef THREADSAFE
+	PIN_RWMutexReadLock(&InstructionsDataLock);
 	assert(threadid <= numThreads);
 	thread_data_t *tdata = get_tls(threadid);
     assert(tdata != nullptr);
@@ -222,13 +234,13 @@ VOID recoredBaseInst(VOID *ip, THREADID threadid)
 
 	if(KnobDebugTrace)
 		instructionTracing(ip,NULL,value,"Base",trace,shadowMemory,tdata->registers);
+
+	#ifdef THREADSAFE
+	PIN_RWMutexUnlock(&InstructionsDataLock);
+    #endif
 }
 
-const UINT32 NONE_OPERATOR_TYPE = 0;
-const UINT32 READ_OPERATOR_TYPE = 1;
-const UINT32 WRITE_OPERATOR_TYPE = 2;
-const UINT32 BOTH_OPERATOR_TYPE = 3;
-
+// Handle instrumentation of an instruction that does read or write memory 
 VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 t2, THREADID threadid, bool pred)
 {
 	UINT32 type1 = t1;
@@ -238,6 +250,7 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 		return;
 
 	#ifdef THREADSAFE
+	PIN_RWMutexReadLock(&InstructionsDataLock);
 	assert(threadid <= numThreads);
 	thread_data_t *tdata = get_tls(threadid);
     assert(tdata != nullptr);
@@ -331,14 +344,19 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 		instructionTracing(ip,addr2,value,"Mem",trace, shadowMemory, tdata->registers);
 		fprintf(trace,"<%p,%u><%p,%u>", addr1, type1, addr2, type2);
 	}
+	#ifdef THREADSAFE
+	PIN_RWMutexUnlock(&InstructionsDataLock);
+    #endif
 }
 
+// Dispatch instrumenation in block trace mode
 VOID blockTracer(VOID *ip, ADDRINT id, THREADID threadid)
 {
 	if(!KnobBBVerstion)
 		return;
 
 	#ifdef THREADSAFE
+	PIN_RWMutexReadLock(&InstructionsDataLock);
 	assert(threadid <= numThreads);
 	thread_data_t *tdata = get_tls(threadid);
     assert(tdata != nullptr);
@@ -355,14 +373,22 @@ VOID blockTracer(VOID *ip, ADDRINT id, THREADID threadid)
 		}
 	}
 	tdata->lastBB = id;
+	#ifdef THREADSAFE
+	PIN_RWMutexUnlock(&InstructionsDataLock);
+    #endif
 }
 
 
+// Code for insturmenting durring excution in jit mode.
 VOID Trace(TRACE pintrace, VOID *v)
 {
-	// if(!inMain)
-	// 	return;
+	if(!inMain)
+		return;
+
+	#ifdef THREADSAFE
 	PIN_LockClient();
+	PIN_RWMutexReadLock(&InstructionsDataLock);
+    #endif
     
     for (BBL bbl = TRACE_BblHead(pintrace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
     {
@@ -393,13 +419,19 @@ VOID Trace(TRACE pintrace, VOID *v)
 							auto ciItr = constInstructionLocations.find((ADDRINT)ip);
 							if(ciItr == constInstructionLocations.end())
 							{
+								// Will need to edit Instruction Data heree
+
 								auto dbrtn = RTN_FindByAddress(ip);
 								RTN_Open(dbrtn);
-								cerr << "IMG = " << IMG_Name(SEC_Img(RTN_Sec(dbrtn))) << endl;
+								auto img = SEC_Img(RTN_Sec(dbrtn));
+								if(IMG_Valid(img))
+									cerr << "IMG = " << IMG_Name(img) << endl;
+								else
+									cerr << "IMG = NO IMAGE" << endl;
+
 								cerr << "RTN = " << RTN_Name(dbrtn) << endl;
 								cerr << "ADDR = " << (void *) ip << endl;
 								cerr << "INS = " << (void *) INS_Address(ins) << "\t" << INS_Disassemble(ins) << endl;
-								// for(auto dbins = RTN_InsHead(dbrtn); INS_Valid(dbins); dbins = INS_Next(dbins))
 								cerr << "BBL Start" << endl;
 								for(auto dbins = BBL_InsHead(bbl); INS_Valid(dbins); dbins = INS_Next(dbins))
 								{
@@ -485,10 +517,41 @@ VOID Trace(TRACE pintrace, VOID *v)
 	    	}
 		}
     }
-    PIN_UnlockClient 	(  		 );
+	#ifdef THREADSAFE
+    PIN_RWMutexUnlock(&InstructionsDataLock);
+    PIN_UnlockClient();
+    #endif
 }
 
-// Malloc Stuff
+// utility for clearing the vector results per thread
+void clearVectors(THREADID threadid)
+{
+	#ifdef THREADSAFE
+	thread_data_t *tdata = get_tls(threadid);
+	#endif
+
+	for(auto it = instructionLocations.begin(); it != instructionLocations.end(); ++it)
+	{
+		it->second.logged = false;
+	}
+	tdata->instructionResults.clear();
+}
+
+// Utility to clear the state per thread
+VOID clearState(THREADID threadid)
+{
+	clearVectors(threadid);
+	shadowMemory.clear();
+	
+	#ifdef THREADSAFE
+	thread_data_t *tdata = get_tls(threadid);
+	#endif
+	tdata->lastBB = 0; //this may be the wrong place
+	tdata->rwContext.addrs.clear();
+	tdata->rwContext.pred.clear();
+}
+
+// Instumentation for malloc calls before the call
 VOID MallocBefore(CHAR * name, ADDRINT size, THREADID threadid)
 {
 	// inAlloc = true;
@@ -503,7 +566,28 @@ VOID MallocBefore(CHAR * name, ADDRINT size, THREADID threadid)
 	tdata->malloc_size = size;
 }
 
-// Free case
+// Instumentation for malloc calls after the call
+VOID MallocAfter(ADDRINT ret, THREADID threadid)
+{
+	// inAlloc = false;
+
+	if(KnobSupressMalloc)
+		return;
+	
+	#ifdef THREADSAFE
+	assert(threadid <= numThreads);
+	thread_data_t* tdata = get_tls(threadid);
+	#endif
+		
+	//Map version
+	if(tdata->malloc_size > 0)
+		shadowMemory.arrayMem(ret, tdata->malloc_size, tracinglevel);
+
+	if(KnobMallocPrinting)
+	    fprintf(trace,"malloc returns %p of size(%p)\n",(void *)ret,(void *)tdata->malloc_size);
+}
+
+// Instumentation for free calls before the call
 VOID FreeBefore(CHAR * name, ADDRINT start, THREADID threadid)
 {
 	// inAlloc = true;
@@ -514,12 +598,13 @@ VOID FreeBefore(CHAR * name, ADDRINT start, THREADID threadid)
 	shadowMemory.arrayMemClear(start);
 }
 
+// Instumentation for free calls before the call
 VOID FreeAfter()
 {
 	// inAlloc = false;
 }
 
-// tracing on
+// Utility for staring tracing starts only if not started
 VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
 {
 	#ifdef THREADSAFE
@@ -545,34 +630,7 @@ VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
     #endif
 }
 
-void clearVectors(THREADID threadid)
-{
-	#ifdef THREADSAFE
-	thread_data_t *tdata = get_tls(threadid);
-	#endif
-
-	for(auto it = instructionLocations.begin(); it != instructionLocations.end(); ++it)
-	{
-		it->second.logged = false;
-	}
-	tdata->instructionResults.clear();
-}
-
-// Clear state to just initialized vectors
-VOID clearState(THREADID threadid)
-{
-	clearVectors(threadid);
-	shadowMemory.clear();
-	
-	#ifdef THREADSAFE
-	thread_data_t *tdata = get_tls(threadid);
-	#endif
-	tdata->lastBB = 0; //this may be the wrong place
-	tdata->rwContext.addrs.clear();
-	tdata->rwContext.pred.clear();
-}
-
-// tracing off
+// Utility for stopping tracing stops after matching number of starts
 VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 {
 	#ifdef THREADSAFE
@@ -617,30 +675,32 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
     #endif
 }
 
+// Instrumentation for trace on calls
 VOID traceFunctionEntry(CHAR * name, ADDRINT start, THREADID threadid)
 {
 	traceOn(name, start, threadid);
 }
 
+// Instrumentation for trace off calls
 VOID traceFunctionExit(CHAR * name, ADDRINT start, THREADID threadid)
 {
 	traceOff(name,start,threadid);
 }
 
-// main start
+// Instrumenation for start of main
 VOID markMainStart(CHAR * name, ADDRINT start, THREADID threadid)
 {
 	inMain = true;
 	cerr << "Start Main" << endl;
 }
 
-//main end
+// Instrumenation for start of main
 VOID markMainEnd(CHAR * name, ADDRINT start, THREADID threadid)
 {
 	cerr << "End Main" << endl;
 	inMain = false;
 }
-// memory allocations other then from malloc
+// Instrumentation for array_mem calls
 VOID arrayMem(ADDRINT start, size_t size)
 {
 	if(KnobMallocPrinting)
@@ -650,6 +710,7 @@ VOID arrayMem(ADDRINT start, size_t size)
 	
 }
 
+// Instrumentation for array_mem_clear calls
 VOID arrayMemClear(ADDRINT start)
 {
 	if(KnobMallocPrinting)
@@ -659,41 +720,27 @@ VOID arrayMemClear(ADDRINT start)
 }
 
 #ifdef LOOPSTACK
+// Instumentation for loopstart calls
 VOID loopStart(ADDRINT id)
 {
 	loopStack.push_front((long long) id);
 }
 
+// Instumentation for loopsend calls
 VOID loopEnd(ADDRINT id)
 {
 	loopStack.pop_front();
 }
 #endif
 
-VOID MallocAfter(ADDRINT ret, THREADID threadid)
-{
-	// inAlloc = false;
 
-	if(KnobSupressMalloc)
-		return;
-	
-	#ifdef THREADSAFE
-	assert(threadid <= numThreads);
-	thread_data_t* tdata = get_tls(threadid);
-	#endif
-		
-	//Map version
-	if(tdata->malloc_size > 0)
-		shadowMemory.arrayMem(ret, tdata->malloc_size, tracinglevel);
-
-	if(KnobMallocPrinting)
-	    fprintf(trace,"malloc returns %p of size(%p)\n",(void *)ret,(void *)tdata->malloc_size);
-}
-
+// Code for instumenting durring image loading
 VOID Image(IMG img, VOID *v)
 {
-    // Instrument the malloc() and free() functions. 
+	PIN_LockClient();
+	PIN_RWMutexWriteLock(&InstructionsDataLock);
 
+    // Instrument the malloc() and free() functions. 
     //  Find the malloc() function.
     RTN mallocRtn = RTN_FindByName(img, MALLOC);
     if (RTN_Valid(mallocRtn))
@@ -836,7 +883,7 @@ VOID Image(IMG img, VOID *v)
         RTN_Close(traceRtn);
     }
 
-	// cerr << "Mapping Image = " << IMG_Name(img) << endl;
+	cerr << "Mapping Image = " << IMG_Name(img) << endl;
     for(auto sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec) )
     {
     	for(auto rtn= SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn) )
@@ -867,9 +914,11 @@ VOID Image(IMG img, VOID *v)
     		RTN_Close(rtn);
     	}
     }
+    PIN_RWMutexUnlock(&InstructionsDataLock);
+    PIN_UnlockClient();
 }
 
-
+// Code for instrumenting thread starting
 VOID ThreadStart(THREADID threadid, CONTEXT *ctxt, INT32 flags, VOID *v)
 {
 	initThread(threadid);
@@ -924,6 +973,7 @@ int main(int argc, char * argv[])
 
     #ifndef THREADSAFE
     tdata = new thread_data_t;
+ 	PIN_RWMutexInit(&InstructionsDataLock);
     #endif
     
 	// Obtain  a key for TLS storage.
@@ -932,8 +982,8 @@ int main(int argc, char * argv[])
     // Register ThreadStart to be called when a thread starts.
     PIN_AddThreadStartFunction(ThreadStart, 0);
 
-    // Register Instruction to be called to instrument instructions
 	IMG_AddInstrumentFunction(Image, 0);
+
 	TRACE_AddInstrumentFunction(Trace, 0);
 
 
