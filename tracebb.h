@@ -8,8 +8,9 @@
 #include <vector>
 #include <set>
 #include <unordered_map>
+#include <atomic>
 
-extern unsigned instructionCount;
+extern atomic<unsigned> instructionCount;
 extern unordered_map<ADDRINT,instructionLocationsData > instructionLocations;
 extern list<long long> loopStack;
 

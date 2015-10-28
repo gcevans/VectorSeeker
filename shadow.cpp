@@ -327,7 +327,7 @@ void ShadowMemory::clear()
     #endif
 };
 
-void ShadowMemory::arrayMem(ADDRINT start, size_t size,bool tracinglevel)
+void ShadowMemory::arrayMem(ADDRINT start, size_t size, bool tracinglevel)
 {
 	#ifdef THREADSAFE
 	PIN_RWMutexWriteLock(&allocationLock);
@@ -337,11 +337,15 @@ void ShadowMemory::arrayMem(ADDRINT start, size_t size,bool tracinglevel)
 	}
 	#endif
 	if(size > 0)
+	{
 		allocationMap[start] = size;
+	}
 	
 	if(tracinglevel)
+	{
 		for(size_t i = 0; i < size; i++)
 			this->writeMemUnlocked(start+i, 1);
+	}
 
 	#ifdef THREADSAFE
 	for(int i = 0; i < regionsNum; i++)

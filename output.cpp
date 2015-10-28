@@ -354,9 +354,10 @@ void finalOutput(FILE *trace, FILE *bbl_log, unordered_map<ADDRINT, ResultVector
 {
 	if(KnobSummaryOn)
 	{
+		unsigned localInstructionCount = instructionCount;
 		fprintf(trace, "#Start Summary\n");
-		fprintf(trace, "#Total Instructions (No Vector Instructions) = %u\n", instructionCount);
-		fprintf(trace, "#Total Instructions (Vector Instructions) = %u\n", instructionCount - vectorInstructionCountSavings);
+		fprintf(trace, "#Total Instructions (No Vector Instructions) = %u\n", localInstructionCount);
+		fprintf(trace, "#Total Instructions (Vector Instructions) = %u\n", localInstructionCount - vectorInstructionCountSavings);
 	}
 
 	if(KnobBBSummary)

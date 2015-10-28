@@ -4,8 +4,6 @@
 
 #include "assert.h"
 
-extern unsigned instructionCount;
-
 #ifdef NOSHAODWCACHE
 VOID handleBaseInstBB(const instructionLocationsData &ins, ShadowMemoryNoCache &shadowMemory, ShadowRegisters &registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out)
 #else
