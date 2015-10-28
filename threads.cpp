@@ -35,6 +35,11 @@ void initThread(THREADID threadid)
     assert(tdata != nullptr);
 
     PIN_SetThreadData(tls_key, tdata, threadid);
+
+    #ifndef THREADSAFE
+    if(numThreads>1)
+        cerr << "Traced program has multiple threads and Vector Seeker is not built with thread support" << endl;
+    #endif
 }
 
 // function to access thread-specific data

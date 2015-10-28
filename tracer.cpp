@@ -192,15 +192,18 @@ VOID Fini(INT32 code, VOID *v)
 // Handle instrumentation of an instruction that does not read or write memory
 VOID recoredBaseInst(VOID *ip, THREADID threadid)
 {
+	if(tracinglevel == 0 || inAlloc)
+		return;
+
 	#ifdef THREADSAFE
+	// cerr << "Ask Read Lock (" << threadid << ")" << endl;
 	PIN_RWMutexReadLock(&InstructionsDataLock);
+	// cerr << "Got Read Lock (" << threadid << ")" << endl;
 	assert(threadid <= numThreads);
 	thread_data_t *tdata = get_tls(threadid);
     assert(tdata != nullptr);
     #endif
 
-	if(tracinglevel == 0 || inAlloc)
-		return;
 
 	instructionCount++;
 		
@@ -236,7 +239,9 @@ VOID recoredBaseInst(VOID *ip, THREADID threadid)
 		instructionTracing(ip,NULL,value,"Base",trace,shadowMemory,tdata->registers);
 
 	#ifdef THREADSAFE
+	// cerr << "Release(" << threadid << ")" << endl;
 	PIN_RWMutexUnlock(&InstructionsDataLock);
+	// cerr << "Released(" << threadid << ")" << endl;
     #endif
 }
 
@@ -250,7 +255,9 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 		return;
 
 	#ifdef THREADSAFE
+	// cerr << "Ask Read Lock (" << threadid << ")" << endl;
 	PIN_RWMutexReadLock(&InstructionsDataLock);
+	// cerr << "Got Read Lock (" << threadid << ")" << endl;
 	assert(threadid <= numThreads);
 	thread_data_t *tdata = get_tls(threadid);
     assert(tdata != nullptr);
@@ -263,6 +270,9 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 		tdata->rwContext.pred.push_back(pred);
 		if(KnobDebugTrace)
 			fprintf(trace,"%p:<%p,%u><%p,%u>\n", (void*) ip, addr1, type1, addr2, type2);
+
+		PIN_RWMutexUnlock(&InstructionsDataLock);
+
 		return;
 	}
 
@@ -270,6 +280,9 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	{
 		if(KnobDebugTrace)
 			fprintf(trace, "%p:pred not executed\n", (void*) ip);
+
+		PIN_RWMutexUnlock(&InstructionsDataLock);
+
 		return;
 	}
 
@@ -345,7 +358,9 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 		fprintf(trace,"<%p,%u><%p,%u>", addr1, type1, addr2, type2);
 	}
 	#ifdef THREADSAFE
+	// cerr << "Release(" << threadid << ")" << endl;
 	PIN_RWMutexUnlock(&InstructionsDataLock);
+	// cerr << "Released(" << threadid << ")" << endl;
     #endif
 }
 
@@ -387,7 +402,9 @@ VOID Trace(TRACE pintrace, VOID *v)
 
 	#ifdef THREADSAFE
 	PIN_LockClient();
+    // cerr << "Ask Read Lock" << endl;
 	PIN_RWMutexReadLock(&InstructionsDataLock);
+    // cerr << "Have Read Lock" << endl;
     #endif
     
     for (BBL bbl = TRACE_BblHead(pintrace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
@@ -421,30 +438,68 @@ VOID Trace(TRACE pintrace, VOID *v)
 							{
 								// Will need to edit Instruction Data heree
 
-								auto dbrtn = RTN_FindByAddress(ip);
-								RTN_Open(dbrtn);
-								auto img = SEC_Img(RTN_Sec(dbrtn));
-								if(IMG_Valid(img))
-									cerr << "IMG = " << IMG_Name(img) << endl;
-								else
-									cerr << "IMG = NO IMAGE" << endl;
+								// auto dbrtn = RTN_FindByAddress(ip);
+								// RTN_Open(dbrtn);
+								// auto img = SEC_Img(RTN_Sec(dbrtn));
+								// if(IMG_Valid(img))
+								// 	cerr << "IMG = " << IMG_Name(img) << endl;
+								// else
+								// 	cerr << "IMG = NO IMAGE" << endl;
 
-								cerr << "RTN = " << RTN_Name(dbrtn) << endl;
-								cerr << "ADDR = " << (void *) ip << endl;
-								cerr << "INS = " << (void *) INS_Address(ins) << "\t" << INS_Disassemble(ins) << endl;
-								cerr << "BBL Start" << endl;
-								for(auto dbins = BBL_InsHead(bbl); INS_Valid(dbins); dbins = INS_Next(dbins))
+								// cerr << "RTN = " << RTN_Name(dbrtn) << endl;
+								// cerr << "ADDR = " << (void *) ip << endl;
+								// cerr << "INS = " << (void *) INS_Address(ins) << "\t" << INS_Disassemble(ins) << endl;
+								// cerr << "BBL Start" << endl;
+								// for(auto dbins = BBL_InsHead(bbl); INS_Valid(dbins); dbins = INS_Next(dbins))
+								// {
+								// 	cerr << (void *) INS_Address(dbins) << "\t" << INS_Disassemble(dbins) << endl;
+								// }
+								// cerr << "BBL End" << endl;
+								// cerr << RTN_Name(dbrtn) << " Start" << endl;
+								// for(auto dbins = RTN_InsHead(dbrtn); INS_Valid(dbins); dbins = INS_Next(dbins))
+								// {
+								// 	cerr << (void *) INS_Address(dbins) << "\t" << INS_Disassemble(dbins) << endl;
+								// }
+								// cerr << RTN_Name(dbrtn) << " End" << endl;
+								// RTN_Close(dbrtn);
+
+								#ifdef THREADSAFE
+								// cerr << "Release Read Lock" << endl;
+							    PIN_RWMutexUnlock(&InstructionsDataLock);
+							    // cerr << "Released Read Lock" << endl;
+							    // cerr << "Ask Write Lock" << endl;
+								PIN_RWMutexWriteLock(&InstructionsDataLock);
+							    // cerr << "Have Write Lock" << endl;
+							    #endif
+								// Insert instruction
+								instructionType insType;
+								insType = decodeInstructionData(ip, instructionLocations);
+								debugData[ip].instruction = INS_Disassemble(ins);
+								instructionLocations[ip].type = insType;
+								instructionLocations[ip].rtn_name = rtn_name;
+								UINT32 memOperands = INS_MemoryOperandCount(ins);
+								instructionLocations[ip].memOperands = memOperands;
+								if(memOperands)
 								{
-									cerr << (void *) INS_Address(dbins) << "\t" << INS_Disassemble(dbins) << endl;
+									instructionLocations[ip].memReadSize = INS_MemoryReadSize(ins);
+									instructionLocations[ip].memWriteSize = INS_MemoryWriteSize(ins);
 								}
-								cerr << "BBL End" << endl;
-								cerr << RTN_Name(dbrtn) << " Start" << endl;
-								for(auto dbins = RTN_InsHead(dbrtn); INS_Valid(dbins); dbins = INS_Next(dbins))
+								if(INS_IsAtomicUpdate(ins))
 								{
-									cerr << (void *) INS_Address(dbins) << "\t" << INS_Disassemble(dbins) << endl;
+									instructionLocations[ip+1] = instructionLocations[ip];
+									debugData[ip+1] = debugData[ip];
 								}
-								cerr << RTN_Name(dbrtn) << " End" << endl;
-								RTN_Close(dbrtn);
+								#ifdef THREADSAFE
+							    // cerr << "Release Write Lock" << endl;
+							    PIN_RWMutexUnlock(&InstructionsDataLock);
+							    // cerr << "Released Write Lock" << endl;
+							    // cerr << "Ask Read Lock" << endl;
+								PIN_RWMutexReadLock(&InstructionsDataLock);
+							    // cerr << "Have Read Lock" << endl;
+							    #endif
+
+								// Find the newly inserted instructions
+								ciItr = constInstructionLocations.find((ADDRINT)ip);
 								assert(ciItr != constInstructionLocations.end());
 							}
 							const instructionLocationsData *current_instruction = &(ciItr->second);
@@ -518,7 +573,9 @@ VOID Trace(TRACE pintrace, VOID *v)
 		}
     }
 	#ifdef THREADSAFE
+	// cerr << "Release Read Lock" << endl;
     PIN_RWMutexUnlock(&InstructionsDataLock);
+    // cerr << "Released Read Lock" << endl;
     PIN_UnlockClient();
     #endif
 }
@@ -619,11 +676,22 @@ VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
 		traceRegionCount++;
 	}
 	if(tracinglevel == 0)
+	{
+		#ifdef THREADSAFE
+		PIN_RWMutexWriteLock(&InstructionsDataLock);
+		#endif
 		clearState(threadid);
+		#ifdef THREADSAFE
+	    PIN_RWMutexUnlock(&InstructionsDataLock);
+		#endif
+	}
 
 	tracinglevel++;
+
 	if(!KnobForFrontend)
+	{
 	    fprintf(trace,"tracing turned on\n");
+	}
  
     #ifdef THREADSAFE
 	PIN_ReleaseLock(&lock);
@@ -691,13 +759,16 @@ VOID traceFunctionExit(CHAR * name, ADDRINT start, THREADID threadid)
 VOID markMainStart(CHAR * name, ADDRINT start, THREADID threadid)
 {
 	inMain = true;
-	cerr << "Start Main" << endl;
+	if(KnobDebugTrace)
+		cerr << "Start Main" << endl;
 }
 
 // Instrumenation for start of main
 VOID markMainEnd(CHAR * name, ADDRINT start, THREADID threadid)
 {
-	cerr << "End Main" << endl;
+	if(KnobDebugTrace)
+		cerr << "End Main" << endl;
+	
 	inMain = false;
 }
 // Instrumentation for array_mem calls
@@ -737,8 +808,9 @@ VOID loopEnd(ADDRINT id)
 // Code for instumenting durring image loading
 VOID Image(IMG img, VOID *v)
 {
+	#ifdef THREADSAFE
 	PIN_LockClient();
-	PIN_RWMutexWriteLock(&InstructionsDataLock);
+	#endif
 
     // Instrument the malloc() and free() functions. 
     //  Find the malloc() function.
@@ -883,7 +955,15 @@ VOID Image(IMG img, VOID *v)
         RTN_Close(traceRtn);
     }
 
-	cerr << "Mapping Image = " << IMG_Name(img) << endl;
+    #ifdef THREADSAFE
+    // cerr << "Ask Write Lock" << endl;
+	PIN_RWMutexWriteLock(&InstructionsDataLock);
+    // cerr << "Have Write Lock" << endl;
+    #endif
+    
+    if(KnobDebugTrace)
+		cerr << "Mapping Image = " << IMG_Name(img) << endl;
+    
     for(auto sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec) )
     {
     	for(auto rtn= SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn) )
@@ -914,13 +994,18 @@ VOID Image(IMG img, VOID *v)
     		RTN_Close(rtn);
     	}
     }
+    #ifdef THREADSAFE
+    // cerr << "Release Write Lock" << endl;
     PIN_RWMutexUnlock(&InstructionsDataLock);
+    // cerr << "Released Write Lock" << endl;
     PIN_UnlockClient();
+    #endif
 }
 
 // Code for instrumenting thread starting
 VOID ThreadStart(THREADID threadid, CONTEXT *ctxt, INT32 flags, VOID *v)
 {
+	// cerr << "start thread " << threadid << endl;
 	initThread(threadid);
 }
 
