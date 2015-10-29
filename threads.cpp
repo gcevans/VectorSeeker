@@ -19,7 +19,7 @@ void initVSThreading()
 }
 
 
-void initThread(THREADID threadid)
+void initThread(THREADID threadid, bool tracing)
 {
 	#ifdef THREADSAFE
     PIN_GetLock(&lock, threadid+1);
@@ -31,6 +31,7 @@ void initThread(THREADID threadid)
 
     thread_data_t* tdata = new thread_data_t;
     tdata->lastBB = 0;
+    tdata->tracing = tracing;
 
     assert(tdata != nullptr);
 

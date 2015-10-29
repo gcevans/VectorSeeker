@@ -101,8 +101,10 @@ PIN_RWMUTEX InstructionsDataLock;
 
 
 // Output Files set in main
-FILE * trace;
+FILE *trace;
+PIN_MUTEX traceLock;
 FILE *bbl_log;
+
 
 #ifdef LOOPSTACK
 list<long long> loopStack;
@@ -187,7 +189,13 @@ VOID Fini(INT32 code, VOID *v)
 	{
 		fprintf(trace,"Progam ended with tracing on\n");
 
+		#ifdef THREADSAFE
+		PIN_MutexLock(&traceLock);
+	    #endif
 		traceOutput(trace, tdata->instructionResults);
+		#ifdef THREADSAFE
+		PIN_MutexUnlock(&traceLock);
+	    #endif
 	}
 
 	finalOutput(trace, bbl_log, tdata->instructionResults);
@@ -198,6 +206,9 @@ VOID recoredBaseInst(VOID *ip, THREADID threadid)
 {
 	#ifdef THREADSAFE
 	PIN_RWMutexReadLock(&traclingLevelLock);
+	assert(threadid <= numThreads);
+	thread_data_t *tdata = get_tls(threadid);
+    assert(tdata != nullptr);
 	#endif
 
 	if(tracingLevel == 0 || inAlloc)
@@ -205,6 +216,13 @@ VOID recoredBaseInst(VOID *ip, THREADID threadid)
 
 		#ifdef THREADSAFE
 		PIN_RWMutexUnlock(&traclingLevelLock);
+		if(tdata->tracing)
+		{
+			tdata->tracing = false;
+			PIN_MutexLock(&traceLock);
+			traceOutput(trace, tdata->instructionResults);
+			PIN_MutexUnlock(&traceLock);
+		}
 		#endif
 		return;
 	}
@@ -214,9 +232,11 @@ VOID recoredBaseInst(VOID *ip, THREADID threadid)
 	// cerr << "Ask Read Lock (" << threadid << ")" << endl;
 	PIN_RWMutexReadLock(&InstructionsDataLock);
 	// cerr << "Got Read Lock (" << threadid << ")" << endl;
-	assert(threadid <= numThreads);
-	thread_data_t *tdata = get_tls(threadid);
-    assert(tdata != nullptr);
+	if(tdata->tracing == false)
+	{
+		tdata->tracing = true;
+		tdata->instructionResults.clear();
+	}
     #endif
 
 
@@ -268,12 +288,22 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 
 	#ifdef THREADSAFE
 	PIN_RWMutexReadLock(&traclingLevelLock);
+	assert(threadid <= numThreads);
+	thread_data_t *tdata = get_tls(threadid);
+    assert(tdata != nullptr);
 	#endif
 
 	if(tracingLevel == 0 || inAlloc)
 	{
 		#ifdef THREADSAFE
 		PIN_RWMutexUnlock(&traclingLevelLock);
+		if(tdata->tracing)
+		{
+			tdata->tracing = false;
+			PIN_MutexLock(&traceLock);
+			traceOutput(trace, tdata->instructionResults);
+			PIN_MutexUnlock(&traceLock);
+		}
 		#endif
 		return;
 	}
@@ -283,9 +313,11 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
 	// cerr << "Ask Read Lock (" << threadid << ")" << endl;
 	PIN_RWMutexReadLock(&InstructionsDataLock);
 	// cerr << "Got Read Lock (" << threadid << ")" << endl;
-	assert(threadid <= numThreads);
-	thread_data_t *tdata = get_tls(threadid);
-    assert(tdata != nullptr);
+	if(tdata->tracing == false)
+	{
+		tdata->tracing = true;
+		tdata->instructionResults.clear();
+	}
     #endif
 
 	if(KnobBBVerstion)
@@ -412,6 +444,18 @@ VOID blockTracer(VOID *ip, ADDRINT id, THREADID threadid)
 			fprintf(trace, "BBL %p executed\n", (void *) tdata->lastBB);
 			basicBlocks[tdata->lastBB].printBlock(trace);
 		}
+	}
+	else
+	{
+		#ifdef THREADSAFE
+		if(tdata->tracing)
+		{
+			tdata->tracing = false;
+			PIN_MutexLock(&traceLock);
+			traceOutput(trace, tdata->instructionResults);
+			PIN_MutexUnlock(&traceLock);
+		}
+	    #endif
 	}
 	tdata->lastBB = id;
 	#ifdef THREADSAFE
@@ -614,6 +658,7 @@ void clearVectors(THREADID threadid)
 	thread_data_t *tdata = get_tls(threadid);
 	#endif
 
+	// FIX?
 	for(auto it = instructionLocations.begin(); it != instructionLocations.end(); ++it)
 	{
 		it->second.logged = false;
@@ -703,6 +748,7 @@ VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
 	#ifdef THREADSAFE
 	PIN_GetLock(&lock,threadid);
 	PIN_RWMutexWriteLock(&traclingLevelLock);
+	thread_data_t* tdata = get_tls(threadid);
 	#endif
 
 	if(traceRegionCount > KnobTraceLimit.Value())
@@ -730,6 +776,7 @@ VOID traceOn(CHAR * name, ADDRINT start, THREADID threadid)
 	}
 
 	tracingLevel++;
+	tdata->tracing = true;
 
 	if(!KnobForFrontend)
 	{
@@ -774,10 +821,16 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 	{
 		blockTracer(NULL, 0,0 ); // trace final block
 		shadowMemory.clear();
-
-		traceOutput(trace, tdata->instructionResults);
-
 		tracingLevel = 0;
+		tdata->tracing = false;
+
+		#ifdef THREADSAFE
+		PIN_MutexLock(&traceLock);
+	    #endif
+		traceOutput(trace, tdata->instructionResults);
+		#ifdef THREADSAFE
+		PIN_MutexUnlock(&traceLock);
+	    #endif
 	}
 	else
 	{
@@ -1062,7 +1115,30 @@ VOID Image(IMG img, VOID *v)
 VOID ThreadStart(THREADID threadid, CONTEXT *ctxt, INT32 flags, VOID *v)
 {
 	// cerr << "start thread " << threadid << endl;
-	initThread(threadid);
+	#ifdef THREADSAFE
+	PIN_RWMutexReadLock(&traclingLevelLock);
+	#endif
+	bool tracing = tracingLevel;
+	#ifdef THREADSAFE
+	PIN_RWMutexUnlock(&traclingLevelLock);
+	#endif
+	initThread(threadid,tracing);
+}
+
+VOID ThreadFini(THREADID threadid, const CONTEXT *ctxt, INT32 code, VOID *v)
+{
+	#ifdef THREADSAFE
+	assert(threadid <= numThreads);
+	thread_data_t *tdata = get_tls(threadid);
+    assert(tdata != nullptr);
+    if(tdata->tracing)
+    {
+		tdata->tracing = false;
+		PIN_MutexLock(&traceLock);
+		traceOutput(trace, tdata->instructionResults);
+		PIN_MutexUnlock(&traceLock);
+    }	
+	#endif
 }
 
 /* ===================================================================== */
@@ -1116,6 +1192,7 @@ int main(int argc, char * argv[])
     tdata = new thread_data_t;
  	PIN_RWMutexInit(&InstructionsDataLock);
  	PIN_RWMutexInit(&traclingLevelLock);
+ 	PIN_MutexInit(&traceLock);
     #endif
     
 	// Obtain  a key for TLS storage.
@@ -1123,6 +1200,7 @@ int main(int argc, char * argv[])
 	
     // Register ThreadStart to be called when a thread starts.
     PIN_AddThreadStartFunction(ThreadStart, 0);
+    PIN_AddThreadFiniFunction(ThreadFini, 0);
 
 	IMG_AddInstrumentFunction(Image, 0);
 

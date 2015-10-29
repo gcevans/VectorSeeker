@@ -23,10 +23,11 @@ public:
 	ExecutionContex rwContext;
 	ShadowRegisters registers;
 	unordered_map<ADDRINT, ResultVector > instructionResults;
+	bool tracing;
 };
 
 void initVSThreading();
-void initThread(THREADID threadid);
+void initThread(THREADID threadid, bool tracing);
 thread_data_t* get_tls(THREADID threadid);
 
 
