@@ -1,5 +1,7 @@
 #include "threads.h"
 #include <assert.h>
+#include <string>
+#include <sstream>
 
 // TLS globals
 TLS_KEY tls_key;
@@ -32,6 +34,14 @@ void initThread(THREADID threadid, bool tracing)
     thread_data_t* tdata = new thread_data_t;
     tdata->lastBB = 0;
     tdata->tracing = tracing;
+
+    // String local debuglog
+    stringstream logbuilder;
+    string logfile;
+    logbuilder << "thread_" << threadid << ".log";
+    logbuilder >> logfile;
+    if(KnobDebugTrace)
+        tdata->debuglog = fopen(logfile.c_str(), "w");
 
     assert(tdata != nullptr);
 

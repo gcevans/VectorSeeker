@@ -99,6 +99,13 @@ const unordered_map<ADDRINT,instructionLocationsData > &constInstructionLocation
 unordered_map<ADDRINT, instructionDebugData> debugData;
 PIN_RWMUTEX InstructionsDataLock;
 
+// The data from decoded basic blocks (Needs thread safety checks)
+// currently protected by InstructionsDataLock
+vector<BBData> basicBlocks;
+const BBData empty; // Default block
+size_t UBBID; // May need to be made atomic
+
+
 
 // Output Files set in main
 FILE *trace;
@@ -114,11 +121,6 @@ list<long long> loopStack;
 #ifndef THREADSAFE
 thread_data_t *tdata;
 #endif
-
-// The data from decoded basic blocks (Needs thread safety checks)
-vector<BBData> basicBlocks;
-const BBData empty; // Default block
-size_t UBBID; // May need to be made atomic
 
 // Local Functions
 VOID clearState(THREADID threadid);
@@ -271,7 +273,7 @@ VOID recoredBaseInst(VOID *ip, THREADID threadid)
 	}
 
 	if(KnobDebugTrace)
-		instructionTracing(ip,NULL,value,"Base",trace,shadowMemory,tdata->registers);
+		instructionTracing(ip,NULL,value,"Base",tdata->debuglog,shadowMemory,tdata->registers);
 
 	#ifdef THREADSAFE
 	// cerr << "Release(" << threadid << ")" << endl;
@@ -421,14 +423,31 @@ VOID RecordMemReadWrite(VOID * ip, VOID * addr1, UINT32 t1, VOID *addr2, UINT32 
     #endif
 }
 
-// Dispatch instrumenation in block trace mode
+// Internal dispatch
+void blockTracerExecuter(VOID *ip, ADDRINT id, thread_data_t *tdata)
+{
+	#ifdef THREADSAFE
+	PIN_RWMutexReadLock(&InstructionsDataLock);
+    #endif
+	basicBlocks[tdata->lastBB].execute(tdata->rwContext, shadowMemory, tdata->registers, tdata->instructionResults, trace);
+	basicBlocks[tdata->lastBB].addSuccessors((ADDRINT) ip);
+	if(KnobDebugTrace)
+	{
+		fprintf(trace, "BBL %p executed\n", (void *) tdata->lastBB);
+		basicBlocks[tdata->lastBB].printBlock(trace);
+	}
+	#ifdef THREADSAFE
+	PIN_RWMutexUnlock(&InstructionsDataLock);
+    #endif
+}
+
+// Wrapper to dispatch instrumenation in block trace mode
 VOID blockTracer(VOID *ip, ADDRINT id, THREADID threadid)
 {
 	if(!KnobBBVerstion)
 		return;
 
 	#ifdef THREADSAFE
-	PIN_RWMutexReadLock(&InstructionsDataLock);
 	assert(threadid <= numThreads);
 	thread_data_t *tdata = get_tls(threadid);
     assert(tdata != nullptr);
@@ -437,13 +456,7 @@ VOID blockTracer(VOID *ip, ADDRINT id, THREADID threadid)
 
 	if(tracingLevel && tdata->lastBB && !inAlloc)
 	{
-		basicBlocks[tdata->lastBB].execute(tdata->rwContext, shadowMemory, tdata->registers, tdata->instructionResults, trace);
-		basicBlocks[tdata->lastBB].addSuccessors((ADDRINT) ip);
-		if(KnobDebugTrace)
-		{
-			fprintf(trace, "BBL %p executed\n", (void *) tdata->lastBB);
-			basicBlocks[tdata->lastBB].printBlock(trace);
-		}
+		blockTracerExecuter(ip, id, tdata);
 	}
 	else
 	{
@@ -460,7 +473,6 @@ VOID blockTracer(VOID *ip, ADDRINT id, THREADID threadid)
 	tdata->lastBB = id;
 	#ifdef THREADSAFE
 	PIN_RWMutexUnlock(&traclingLevelLock);
-	PIN_RWMutexUnlock(&InstructionsDataLock);
     #endif
 }
 
@@ -819,7 +831,10 @@ VOID traceOff(CHAR * name, ADDRINT start, THREADID threadid)
 	}
 	else if(tracingLevel == 1)
 	{
-		blockTracer(NULL, 0,0 ); // trace final block
+		if(tdata->lastBB && !inAlloc)
+		{
+			blockTracerExecuter(NULL, 0, tdata); // trace final block
+		}
 		shadowMemory.clear();
 		tracingLevel = 0;
 		tdata->tracing = false;
@@ -1190,6 +1205,9 @@ int main(int argc, char * argv[])
 
     #ifndef THREADSAFE
     tdata = new thread_data_t;
+    #endif
+
+    #ifdef THREADSAFE
  	PIN_RWMutexInit(&InstructionsDataLock);
  	PIN_RWMutexInit(&traclingLevelLock);
  	PIN_MutexInit(&traceLock);
@@ -1202,10 +1220,11 @@ int main(int argc, char * argv[])
     PIN_AddThreadStartFunction(ThreadStart, 0);
     PIN_AddThreadFiniFunction(ThreadFini, 0);
 
+    // Register Image load time instrumentation
 	IMG_AddInstrumentFunction(Image, 0);
 
+	// Register Run time instrumentation
 	TRACE_AddInstrumentFunction(Trace, 0);
-
 
     // Register Fini to be called when the application exits
     PIN_AddFiniFunction(Fini, 0);

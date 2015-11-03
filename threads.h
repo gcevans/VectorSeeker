@@ -5,6 +5,7 @@
 #include "shadow.h"
 #include "tracebb.h"
 #include "resultvector.h"
+#include "tracer.h"
 
 
 extern TLS_KEY tls_key;
@@ -24,6 +25,7 @@ public:
 	ShadowRegisters registers;
 	unordered_map<ADDRINT, ResultVector > instructionResults;
 	bool tracing;
+	FILE *debuglog;
 };
 
 void initVSThreading();
