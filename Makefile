@@ -3,7 +3,7 @@ CC = gcc
 BUILDTEST = -O3 -vec-report3 -vec-threshold0 -inline-debug-info -g
 PINPATH = ../pin
 #uncomment to build thread safe version of vectorseeker
-THREADED = -DTHREADSAFE
+#THREADED = -DTHREADSAFE
 #uncomment to use old shadowmemory
 #NOCACHESM = -DNOSHAODWCACHE
 XEDNAME = xed-intel64
