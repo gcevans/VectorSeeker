@@ -86,7 +86,7 @@ VOID writeLog(FILE * trace, unordered_map<ADDRINT, ResultVector > &instructionRe
 		{
 #ifdef LOOPSTACK
 			std::ostringstream loopstackstring;
-			for(std::list<long long>::reverse_iterator it = ins->loopid.rbegin(); it != ins->loopid.rend();)
+			for(auto it = ins->loopid.rbegin(); it != ins->loopid.rend();)
 			{
 				loopstackstring << *it;
 				it++;
