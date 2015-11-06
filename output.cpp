@@ -109,7 +109,6 @@ VOID writeLog(FILE * trace, unordered_map<ADDRINT, ResultVector > &instructionRe
 					int vector_count = -1;
 					int current_vector_size = -1;
 					bool once = false;
-					map<long,long>::iterator timeit;
 	
 					fprintf(trace,"\t%p:%s:%s\n\t%s\n\t\t",ip,getInstCategoryString(ip),debugData[(ADDRINT) ip].instruction.c_str(),instructionLocations[(ADDRINT)ip].rtn_name.c_str());
 	
