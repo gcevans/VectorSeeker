@@ -67,12 +67,6 @@ END_LEGAL */
 #define MINTHRESHOLD 0
 #define MINVECTORWIDTH 100
 
-// constants for memory operators
-const UINT32 NONE_OPERATOR_TYPE = 0;
-const UINT32 READ_OPERATOR_TYPE = 1;
-const UINT32 WRITE_OPERATOR_TYPE = 2;
-const UINT32 BOTH_OPERATOR_TYPE = 3;
-
 // Shared Globals
 
 // Status Variables

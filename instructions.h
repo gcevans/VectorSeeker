@@ -5,12 +5,22 @@
 #include <list>	
 #include <vector>
 
-extern const UINT32 NONE_OPERATOR_TYPE;
-extern const UINT32 READ_OPERATOR_TYPE;
-extern const UINT32 WRITE_OPERATOR_TYPE;
-extern const UINT32 BOTH_OPERATOR_TYPE;
+// These are used as a bit field to check operand types
+enum OPTYPES : UINT32
+{
+	NONE_OPERATOR_TYPE = 0,
+	READ_OPERATOR_TYPE = 1,
+	WRITE_OPERATOR_TYPE = 2,
+	BOTH_OPERATOR_TYPE = 3	
+};
 
-enum instructionType { IGNORED_INS_TYPE, NORMAL_INS_TYPE, MOVEONLY_INS_TYPE, X87_INS_TYPE};
+enum instructionType
+{
+	IGNORED_INS_TYPE,	// Instruction is not traced at all
+	NORMAL_INS_TYPE,	// Standard instruction
+	MOVEONLY_INS_TYPE,	// Instruction only moves memory or registers
+	X87_INS_TYPE		// X87 Instruction that is not supported
+};
 
 struct instructionLocationsData
 {
