@@ -1,0 +1,5 @@
+Vector Seeker Trace File Format
+
+The vector seeker trace file is a binary file that stores the results of the trace to later be parsed into human readable form.
+
+The
