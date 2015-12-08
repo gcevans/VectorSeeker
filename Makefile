@@ -17,7 +17,13 @@ COPTS1 = -g -std=gnu++0x -c -Wall -Werror -Wno-unknown-pragmas  -O3 -fomit-frame
 COPTS2 = -fno-stack-protector -DTARGET_IA32E -DHOST_IA32E -fPIC -DTARGET_LINUX -O3 -fomit-frame-pointer $(NOCACHESM)
 LOPTS = -g -std=gnu++0x -Wl,--hash-style=sysv -shared -Wl,-Bsymbolic -Wl,--version-script=$(PINPATH)/source/include/pin/pintool.ver
 
-all : tracer.so mintest deeploops mintest-nodebug
+all : tracer.so mintest deeploops mintest-nodebug vsdisplay
+
+vsdisplay : vsdisplay.o
+	$(CXX) -g -o vsdisplay vsdisplay.o
+
+vsdisplay.o : vsdisplay.cpp
+	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o vsdisplay.o vsdisplay.cpp
 
 tracer.o : tracer.cpp tracer.h tracerlib.h tracer_decode.h shadow.h resultvector.h tracebb.h instructions.h output.h threads.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o tracer.o tracer.cpp
