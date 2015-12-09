@@ -19,10 +19,10 @@ LOPTS = -g -std=gnu++0x -Wl,--hash-style=sysv -shared -Wl,-Bsymbolic -Wl,--versi
 
 all : tracer.so mintest deeploops mintest-nodebug vsdisplay
 
-vsdisplay : vsdisplay.o
-	$(CXX) -g -o vsdisplay vsdisplay.o
+vsdisplay : vsdisplay.o output.o tracebb.o resultvector.o
+	$(CXX) -g -o vsdisplay vsdisplay.o output.o tracebb.o resultvector.o $(LINKDIR2) $(LIBS)
 
-vsdisplay.o : vsdisplay.cpp
+vsdisplay.o : vsdisplay.cpp output.h tracer.h
 	$(CXX) $(COPTS1) $(INCDIR) $(COPTS2) -o vsdisplay.o vsdisplay.cpp
 
 tracer.o : tracer.cpp tracer.h tracerlib.h tracer_decode.h shadow.h resultvector.h tracebb.h instructions.h output.h threads.h

@@ -155,16 +155,21 @@ void printAddrs(const vector<pair<ADDRINT,UINT32> > &addrs, FILE *out)
 	fprintf(out, "\n");
 }
 
+void BBData::incExecutionCount()
+{
+	execution_count += 1;
+}
+
 #ifdef NOSHAODWCACHE
-VOID BBData::execute(ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, ShadowRegisters registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out)
+VOID BBData::execute(BBData block, ExecutionContex &contexts, ShadowMemoryNoCache &shadowMemory, ShadowRegisters registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out)
 #else
-VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, ShadowRegisters &registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out)
+VOID BBData::execute(BBData block, ExecutionContex &contexts, ShadowMemory &shadowMemory, ShadowRegisters &registers, unordered_map<ADDRINT, ResultVector > &instructionResults, FILE *out)
 #endif
 {
 	if(KnobBBSummary)
-		this->execution_count += 1;
+		block.incExecutionCount();
 
-	if(instructions.size() == 0) // probably a bare call
+	if(block.getNumInstuructions() == 0) // probably a bare call
 		return;
 
 	size_t memOpsCount = 0;
@@ -195,7 +200,7 @@ VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, Shad
 //				if(KnobDebugTrace)
 				{
 					fprintf(out, "Lacking Addrs %p\t%s\n", (void *) instructions[i].ip, debugData[instructions[i].ip].instruction.c_str());
-					this->printBlock(out);
+					block.printBlock(out);
 				}
 				break;
 			}
@@ -213,7 +218,7 @@ VOID BBData::execute(ExecutionContex &contexts, ShadowMemory &shadowMemory, Shad
 	if(KnobDebugTrace)
 	{
 		fprintf(out, "Done Executing Block Ending %p\n", (void *) instructions.back().ip);
-		this->printBlock(out);
+		block.printBlock(out);
 		printAddrs(contexts.addrs, out);
 	}
 	contexts.addrs.clear();

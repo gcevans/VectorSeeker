@@ -2,6 +2,8 @@
 #define OUTPUT_H
 
 #include "tracer.h"
+#include "tracebb.h"
+#include "resultvector.h"
 
 void logBasicBlock(BBL bbl, ADDRINT id, FILE *bbl_log);
 void finalOutput(FILE *trace, FILE* bbl_log, unordered_map<ADDRINT, ResultVector > &instructionResults);

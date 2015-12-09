@@ -423,7 +423,7 @@ void blockTracerExecuter(VOID *ip, ADDRINT id, thread_data_t *tdata)
 	#ifdef THREADSAFE
 	PIN_RWMutexReadLock(&InstructionsDataLock);
     #endif
-	basicBlocks[tdata->lastBB].execute(tdata->rwContext, shadowMemory, tdata->registers, tdata->instructionResults, trace);
+	basicBlocks[tdata->lastBB].execute(basicBlocks[tdata->lastBB], tdata->rwContext, shadowMemory, tdata->registers, tdata->instructionResults, trace);
 	basicBlocks[tdata->lastBB].addSuccessors((ADDRINT) ip);
 	if(KnobDebugTrace)
 	{
