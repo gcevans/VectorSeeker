@@ -12,3 +12,5 @@ The target runtest will buid Vector Seeker and run on the very small test code m
 The standard log output here consits of two sections. The first section lists the malloc calls durring the trace. The second section lists the source lines examined by in descending order of number of instructions seen. Then has each instruction listed followed by the function the instruction was found in then then the pairs of vectors. The vector pairs are in the following format <depth in dependance graph, number of executions of instruction>.
 
 More information can be found in the paper "Vector Seeker A Tool For Finding Vector Potential", G. Carl Evans, Seth Abraham, Bob Kuhn and David Padua.
+
+This material is based in part upon work supported by the Department of Energy, National Nuclear Security Administration, under Award Number DE-NA0002374.
